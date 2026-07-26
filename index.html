@@ -972,7 +972,14 @@
         // ============================================
         const supabaseUrl = 'https://weaqlpxqljyqutiqmnqi.supabase.co';
         const supabaseAnonKey = 'sb_publishable_SKJPvxGfhnnkpB5rTh_JrA_moWaqq7R';
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey, {
+            auth: {
+                storage: window.localStorage,
+                autoRefreshToken: true,
+                persistSession: true,
+                detectSessionInUrl: false
+            }
+        });
 
         let currentMachineId = null;
         let currentJwtToken = null;
@@ -985,8 +992,8 @@
                 const metadata = session.user.user_metadata || {};
                 if (metadata.machine_id === currentMachineId) {
                     document.getElementById('lockScreen').style.display = 'none';
-                    // We keep this for backward compatibility with UI state if needed
                     localStorage.setItem('nikia_invite_code', session.user.email.split('@')[0]);
+                    loadHomepage(); // Render the homepage since auth succeeded
                     return;
                 }
                 // Invalid machine ID, sign out
@@ -1052,6 +1059,7 @@
                 // Success
                 localStorage.setItem('nikia_invite_code', code);
                 el('lockScreen').style.display = 'none';
+                loadHomepage(); // Render the homepage since auth succeeded
             });
         }
         initAuth();
@@ -2275,9 +2283,6 @@
         window.addEventListener('scroll', function() {
             navbar.classList.toggle('scrolled', window.scrollY > 20);
         });
-
-        // Init
-        loadHomepage();
     })();
     </script>
 </body>
