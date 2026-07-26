@@ -3,6 +3,9 @@ name: Build Nikia
 on:
   workflow_dispatch: # Allows you to run this manually from the Actions tab
 
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
@@ -26,10 +29,14 @@ jobs:
       - name: Build Windows
         if: matrix.os == 'windows-latest'
         run: npm run build:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Mac
         if: matrix.os == 'macos-latest'
         run: npm run build:mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
