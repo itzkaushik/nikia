@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
     <link href="https://unpkg.com/@videojs/themes@1/dist/netflix/index.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
@@ -628,9 +629,48 @@
         .source-drawer .torrent-item.active-source {
             border-color: var(--accent); background: rgba(233,30,140,0.1);
         }
+        /* Lock Screen */
+        #lockScreen {
+            position: fixed; inset: 0; z-index: 9999;
+            background: #0a0a0f; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+        }
+        .lock-box {
+            background: var(--bg-card); padding: 40px; border-radius: 16px;
+            text-align: center; max-width: 400px; width: 90%;
+            border: 1px solid var(--border); box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+        .lock-box h2 { font-size: 1.5rem; color: #fff; margin-bottom: 10px; }
+        .lock-box p { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 24px; line-height: 1.4; }
+        .lock-box input {
+            width: 100%; padding: 14px; border-radius: var(--radius-sm);
+            background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+            color: #fff; font-size: 1rem; text-align: center; letter-spacing: 0.1em;
+            text-transform: uppercase; margin-bottom: 20px; outline: none;
+        }
+        .lock-box input:focus { border-color: var(--accent); }
+        .lock-box button {
+            width: 100%; background: linear-gradient(135deg, var(--accent), #ff6bb5);
+            color: #fff; border: none; padding: 14px; border-radius: var(--radius-sm);
+            font-weight: bold; font-size: 1rem; cursor: pointer; transition: all 0.2s;
+        }
+        .lock-box button:hover { transform: translateY(-2px); box-shadow: 0 4px 15px var(--accent-glow); }
+        #lockError { color: #ff5555; font-size: 0.85rem; margin-top: 15px; display: none; }
     </style>
 </head>
 <body>
+    <!-- Lock Screen -->
+    <div id="lockScreen">
+        <div class="lock-box">
+            <svg viewBox="0 0 32 32" fill="none" style="width: 48px; height: 48px; margin-bottom: 20px;"><rect width="32" height="32" rx="8" fill="#e91e8c"/><path d="M11 8l10 8-10 8V8z" fill="white"/></svg>
+            <h2>Welcome to Nikia</h2>
+            <p>This is a private build. Please enter your invite code to continue.</p>
+            <input type="text" id="inviteCode" placeholder="NIKIA-XXXXXX-XXXX" spellcheck="false" autocomplete="off">
+            <button id="verifyBtn">Verify Access</button>
+            <p id="lockError">Invalid or already claimed code.</p>
+        </div>
+    </div>
+
     <!-- Navbar -->
     <nav class="navbar" id="navbar">
         <div class="nav-brand">
@@ -921,6 +961,76 @@
         var searchTimeout = null;
 
         var el = function(id) { return document.getElementById(id); };
+        
+        // ============================================
+        // AUTHENTICATION & HARDWARE BINDING
+        // ============================================
+        const supabaseUrl = 'https://weaqlpxqljyqutiqmnqi.supabase.co';
+        const supabaseAnonKey = 'sb_publishable_SKJPvxGfhnnkpB5rTh_JrA_moWaqq7R';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+        async function initAuth() {
+            const savedCode = localStorage.getItem('nikia_invite_code');
+            const machineId = await window.nikia.getMachineId();
+            
+            if (savedCode) {
+                // Verify saved code matches machine
+                const { data, error } = await supabase.from('invites').select('*').eq('code', savedCode).single();
+                if (data && data.machine_id === machineId) {
+                    el('lockScreen').style.display = 'none'; // Unlock
+                    return;
+                } else {
+                    localStorage.removeItem('nikia_invite_code'); // Invalid cache
+                }
+            }
+            
+            // Show lock screen
+            el('lockScreen').style.display = 'flex';
+
+            el('verifyBtn').addEventListener('click', async () => {
+                const code = el('inviteCode').value.trim().toUpperCase();
+                if (!code) return;
+
+                el('verifyBtn').innerText = 'Verifying...';
+                el('lockError').style.display = 'none';
+
+                const { data, error } = await supabase.from('invites').select('*').eq('code', code).single();
+                
+                if (error || !data) {
+                    el('lockError').innerText = 'Invalid invite code.';
+                    el('lockError').style.display = 'block';
+                    el('verifyBtn').innerText = 'Verify Access';
+                    return;
+                }
+
+                if (data.is_used) {
+                    if (data.machine_id !== machineId) {
+                        el('lockError').innerText = 'This code is already bound to another PC.';
+                        el('lockError').style.display = 'block';
+                        el('verifyBtn').innerText = 'Verify Access';
+                        return;
+                    }
+                    // Valid existing bind
+                } else {
+                    // Bind new code to this machine
+                    const { error: updateError } = await supabase.from('invites')
+                        .update({ is_used: true, machine_id: machineId })
+                        .eq('code', code);
+                    
+                    if (updateError) {
+                        el('lockError').innerText = 'Failed to bind code. Try again.';
+                        el('lockError').style.display = 'block';
+                        el('verifyBtn').innerText = 'Verify Access';
+                        return;
+                    }
+                }
+
+                // Success
+                localStorage.setItem('nikia_invite_code', code);
+                el('lockScreen').style.display = 'none';
+            });
+        }
+        initAuth();
         var homePage = el('homePage');
         var watchPage = el('watchPage');
         var searchOverlay = el('searchOverlay');

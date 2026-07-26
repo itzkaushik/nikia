@@ -11,6 +11,7 @@ const os = require('os');
 const OpenSubtitles = require('opensubtitles-api');
 const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
+const { machineIdSync } = require('node-machine-id');
 
 // Setup Auto Updater Logging
 log.transports.file.level = 'info';
@@ -395,6 +396,10 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
+
+  ipcMain.handle('get-machine-id', () => {
+    return machineIdSync();
+  });
 
   // ============================================================================
   // POPUP BLOCKER â€” Block all window.open() calls

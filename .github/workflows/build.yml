@@ -1,4 +1,4 @@
-﻿name: Build Nikia
+name: Build Nikia
 
 on:
   workflow_dispatch: # Allows you to run this manually from the Actions tab
@@ -13,10 +13,10 @@ jobs:
     
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
 
@@ -32,7 +32,7 @@ jobs:
         run: npm run build:mac
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Nikia-${{ matrix.os }}
           path: |

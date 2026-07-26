@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('nikia', {
   // Utility: check if we're running inside Electron
   isElectron: true,
   platform: process.platform,
+  getMachineId: () => ipcRenderer.invoke('get-machine-id'),
 
   // ============================
   // TORRENT CONTROLS
