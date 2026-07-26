@@ -1168,7 +1168,6 @@
         // ============================
         var socket = null;
         var currentRoomCode = null;
-        var isSeeking = false;
         var lastSyncTime = 0;
 
         function generateRoomCode() {
@@ -1303,7 +1302,6 @@
                         }
                     }
 
-                    isSeeking = true;
                     lastSyncTime = Date.now();
                     
                     if (currentPlayMode === 'torrent') {
@@ -1950,17 +1948,17 @@
         // ============================
         player.on('play', function() {
             if (currentPlayMode !== 'torrent') return;
-            if (isSeeking || (Date.now() - lastSyncTime < 500)) return;
+            if (Date.now() - lastSyncTime < 500) return;
             wsSend({ type: 'play', currentTime: player.currentTime() });
         });
         player.on('pause', function() {
             if (currentPlayMode !== 'torrent') return;
-            if (isSeeking || (Date.now() - lastSyncTime < 500)) return;
+            if (Date.now() - lastSyncTime < 500) return;
             wsSend({ type: 'pause', currentTime: player.currentTime() });
         });
         player.on('seeked', function() {
             if (currentPlayMode !== 'torrent') return;
-            if (isSeeking || (Date.now() - lastSyncTime < 500)) return;
+            if (Date.now() - lastSyncTime < 500) return;
             wsSend({ type: 'seek', currentTime: player.currentTime() });
         });
 
