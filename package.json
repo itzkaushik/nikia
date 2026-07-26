@@ -1,13 +1,13 @@
 {
   "name": "nikia",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Nikia — Watch Together Desktop App",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build:win": "electron-builder --win",
-    "build:mac": "electron-builder --mac",
-    "build": "electron-builder --win --mac"
+    "build:win": "electron-builder --win -p always",
+    "build:mac": "electron-builder --mac -p always",
+    "build": "electron-builder --win --mac -p always"
   },
   "author": "itzkaushik",
   "license": "MIT",

@@ -279,7 +279,8 @@ const SYNC_BRIDGE_SCRIPT = `
     // --- VIDEO SYNC BRIDGE ---
     (function() {
       var syncedVideo = null;
-      var ignoreEvents = false;
+      var expectedPlayState = null;
+      var expectedSeekTime = -1;
 
       function hookVideo(video) {
         if (syncedVideo === video) return;
@@ -287,52 +288,68 @@ const SYNC_BRIDGE_SCRIPT = `
         console.log('Nikia Sync Bridge: Found <video>, attaching listeners');
 
         video.addEventListener('play', function() {
-          if (ignoreEvents) return;
-          window.parent.postMessage({
-            type: 'Nikia_IFRAME_EVENT',
-            event: 'play',
-            currentTime: video.currentTime
-          }, '*');
+          if (expectedPlayState === 'play') {
+            expectedPlayState = null;
+            return;
+          }
+          window.top.postMessage({ type: 'Nikia_IFRAME_EVENT', event: 'play', currentTime: video.currentTime }, '*');
         });
 
         video.addEventListener('pause', function() {
-          if (ignoreEvents) return;
-          window.parent.postMessage({
-            type: 'Nikia_IFRAME_EVENT',
-            event: 'pause',
-            currentTime: video.currentTime
-          }, '*');
+          if (expectedPlayState === 'pause') {
+            expectedPlayState = null;
+            return;
+          }
+          window.top.postMessage({ type: 'Nikia_IFRAME_EVENT', event: 'pause', currentTime: video.currentTime }, '*');
         });
 
         video.addEventListener('seeked', function() {
-          if (ignoreEvents) return;
-          window.parent.postMessage({
-            type: 'Nikia_IFRAME_EVENT',
-            event: 'seek',
-            currentTime: video.currentTime
-          }, '*');
+          if (expectedSeekTime !== -1 && Math.abs(video.currentTime - expectedSeekTime) < 1) {
+            expectedSeekTime = -1;
+            return;
+          }
+          window.top.postMessage({ type: 'Nikia_IFRAME_EVENT', event: 'seek', currentTime: video.currentTime }, '*');
         });
       }
 
       // Listen for sync commands FROM the parent
       window.addEventListener('message', function(e) {
         if (!e.data || e.data.type !== 'Nikia_SYNC_COMMAND') return;
-        if (!syncedVideo) return;
-
-        ignoreEvents = true;
-        var cmd = e.data;
-
-        if (cmd.action === 'play') {
-          syncedVideo.currentTime = cmd.currentTime;
-          syncedVideo.play().catch(function(){});
-        } else if (cmd.action === 'pause') {
-          syncedVideo.currentTime = cmd.currentTime;
-          syncedVideo.pause();
-        } else if (cmd.action === 'seek') {
-          syncedVideo.currentTime = cmd.currentTime;
+        
+        // Forward command to child iframes if we don't have the video
+        if (!syncedVideo) {
+          for (var i = 0; i < window.frames.length; i++) {
+            window.frames[i].postMessage(e.data, '*');
+          }
+          return;
         }
 
-        setTimeout(function() { ignoreEvents = false; }, 500);
+        var cmd = e.data;
+        try {
+          if (cmd.action === 'heartbeat_req') {
+            window.top.postMessage({ type: 'Nikia_IFRAME_EVENT', event: 'heartbeat', currentTime: syncedVideo.currentTime }, '*');
+            return;
+          }
+          
+          if (cmd.action === 'play') {
+            if (!syncedVideo.paused) return; // Already playing
+            expectedPlayState = 'play';
+            syncedVideo.currentTime = cmd.currentTime;
+            syncedVideo.play().catch(function(){});
+          } else if (cmd.action === 'pause') {
+            if (syncedVideo.paused) return; // Already paused
+            expectedPlayState = 'pause';
+            syncedVideo.currentTime = cmd.currentTime;
+            syncedVideo.pause();
+          } else if (cmd.action === 'seek') {
+            if (Math.abs(syncedVideo.currentTime - cmd.currentTime) > 1) {
+              expectedSeekTime = cmd.currentTime;
+              syncedVideo.currentTime = cmd.currentTime;
+            }
+          }
+        } catch (err) {
+          console.error('Nikia Sync Bridge Error:', err);
+        }
       });
 
       // Hook existing videos

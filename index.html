@@ -1178,8 +1178,11 @@
             return code;
         }
 
+        var heartbeatInterval = null;
+
         function connectToRoom(roomCode) {
             if (socket) { socket.close(); socket = null; }
+            if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
             currentRoomCode = roomCode.toUpperCase();
             socket = new WebSocket('wss://cine-sync.cine-sync.workers.dev/ws?room=' + currentRoomCode);
 
@@ -1190,15 +1193,41 @@
                 el('roomNotConnected').style.display = 'none';
                 el('roomConnected').style.display = 'block';
                 el('roomCodeDisplay').textContent = currentRoomCode;
+
+                // Start Heartbeat if Host
+                if (amIHost) {
+                    heartbeatInterval = setInterval(function() {
+                        if (socket && socket.readyState === WebSocket.OPEN) {
+                            var t = 0;
+                            if (currentPlayMode === 'torrent' && player) {
+                                t = player.currentTime();
+                            } else if (el('embedFrame').contentWindow) {
+                                // Request time from iframe bridge
+                                el('embedFrame').contentWindow.postMessage({ type: 'Nikia_SYNC_COMMAND', action: 'heartbeat_req' }, '*');
+                                return; // the bridge will respond with Nikia_IFRAME_EVENT heartbeat
+                            }
+                            wsSend({ type: 'sync_heartbeat', currentTime: t });
+                        }
+                    }, 5000);
+                }
             };
             socket.onclose = function() {
+                if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
                 el('syncBadge').classList.add('disconnected');
                 el('syncBadge').classList.remove('in-room');
-                el('syncLabel').textContent = 'No Room';
-                currentRoomCode = null;
-                socket = null;
-                el('roomNotConnected').style.display = 'block';
-                el('roomConnected').style.display = 'none';
+                el('syncLabel').textContent = 'Reconnecting...';
+                
+                // Auto-reconnect if we didn't deliberately disconnect
+                if (currentRoomCode) {
+                    setTimeout(function() {
+                        if (currentRoomCode) connectToRoom(currentRoomCode);
+                    }, 3000);
+                } else {
+                    socket = null;
+                    el('syncLabel').textContent = 'No Room';
+                    el('roomNotConnected').style.display = 'block';
+                    el('roomConnected').style.display = 'none';
+                }
             };
             socket.onmessage = function(event) {
                 var data = JSON.parse(event.data);
@@ -1248,8 +1277,32 @@
                 }
 
                 // --- PLAY/PAUSE/SEEK: Forward to the correct player ---
-                if (data.type === 'play' || data.type === 'pause' || data.type === 'seek') {
-                    console.log('Sync command received:', data.type, 'at', data.currentTime);
+                if (data.type === 'play' || data.type === 'pause' || data.type === 'seek' || data.type === 'sync_heartbeat') {
+                    if (data.type !== 'sync_heartbeat') {
+                        console.log('Sync command received:', data.type, 'at', data.currentTime);
+                    }
+                    
+                    if (data.type === 'sync_heartbeat') {
+                        if (amIHost) return; // Host sends heartbeats, doesn't receive them
+                        var currentT = 0;
+                        if (currentPlayMode === 'torrent' && player) {
+                            currentT = player.currentTime();
+                        } else if (window.__lastKnownIframeTime) {
+                            currentT = window.__lastKnownIframeTime;
+                        } else {
+                            // If we don't know our current time yet, just do a seek to sync up
+                            data.type = 'seek';
+                        }
+                        
+                        // If drift is less than 2 seconds, ignore it
+                        if (data.type === 'sync_heartbeat' && Math.abs(currentT - data.currentTime) < 2) {
+                            return;
+                        } else if (data.type === 'sync_heartbeat') {
+                            console.log('Drift detected! Snapping to Host time:', data.currentTime);
+                            data.type = 'seek';
+                        }
+                    }
+
                     isSeeking = true;
                     lastSyncTime = Date.now();
                     
@@ -1275,7 +1328,8 @@
                             }, '*');
                         }
                     }
-                    setTimeout(function() { isSeeking = false; }, 500);
+                    // We remove the 500ms block since the iframe handles its own echo prevention perfectly now
+                    // We keep a small 100ms throttle in the iframe receiver above
                     return;
                 }
             };
@@ -1340,12 +1394,21 @@
         // ============================================
         // IFRAME VIDEO SYNC BRIDGE (replaces extension)
         // ============================================
-        // Listen for play/pause/seek events FROM the provider iframe.
-        // These are sent by the sync bridge script injected by Electron's main.js.
         window.addEventListener('message', function(event) {
             if (event.data && event.data.type === 'Nikia_IFRAME_EVENT') {
-                // Debounce: don't re-broadcast events we just received from the other user
-                if (isSeeking || (Date.now() - lastSyncTime < 500)) return;
+                if (event.data.currentTime !== undefined) {
+                    window.__lastKnownIframeTime = event.data.currentTime;
+                }
+                
+                if (event.data.event === 'heartbeat') {
+                    // This is the response to heartbeat_req
+                    wsSend({ type: 'sync_heartbeat', currentTime: event.data.currentTime });
+                    return;
+                }
+                
+                // For play/pause/seek, just forward. The smart iframe bridge handles echo prevention.
+                // We keep a 100ms debounce just to prevent absolute spam if the user scrubs rapidly
+                if (Date.now() - lastSyncTime < 100) return;
                 console.log('Iframe event:', event.data.event, 'at', event.data.currentTime);
                 wsSend({ type: event.data.event, currentTime: event.data.currentTime });
             }
