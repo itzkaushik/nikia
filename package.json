@@ -1,0 +1,48 @@
+{
+  "name": "nikia",
+  "version": "1.0.0",
+  "description": "Nikia — Watch Together Desktop App",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build": "electron-builder --win --mac"
+  },
+  "author": "itzkaushik",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "repository": "itzkaushik/nikia",
+  "build": {
+    "appId": "com.nikia.app",
+    "productName": "Nikia",
+    "npmRebuild": false,
+    "publish": {
+      "provider": "github",
+      "owner": "itzkaushik",
+      "repo": "nikia"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": null
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": null
+    }
+  },
+  "dependencies": {
+    "electron-log": "^5.4.4",
+    "electron-updater": "^6.8.9",
+    "opensubtitles-api": "^5.1.2",
+    "webtorrent": "^3.0.16"
+  }
+}
