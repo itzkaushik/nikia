@@ -974,24 +974,33 @@
         const supabaseAnonKey = 'sb_publishable_SKJPvxGfhnnkpB5rTh_JrA_moWaqq7R';
         const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
-        async function initAuth() {
-            const savedCode = localStorage.getItem('nikia_invite_code');
-            const machineId = await window.nikia.getMachineId();
+        let currentMachineId = null;
+        let currentJwtToken = null;
+
+        async function checkInvite() {
+            const { data: { session } } = await supabase.auth.getSession();
             
-            if (savedCode) {
-                // Verify saved code matches machine
-                const { data, error } = await supabase.from('invites').select('*').eq('code', savedCode).single();
-                if (data && data.machine_id === machineId) {
-                    el('lockScreen').style.display = 'none'; // Unlock
+            if (session) {
+                currentJwtToken = session.access_token;
+                const metadata = session.user.user_metadata || {};
+                if (metadata.machine_id === currentMachineId) {
+                    document.getElementById('lockScreen').style.display = 'none';
+                    // We keep this for backward compatibility with UI state if needed
+                    localStorage.setItem('nikia_invite_code', session.user.email.split('@')[0]);
                     return;
-                } else {
-                    localStorage.removeItem('nikia_invite_code'); // Invalid cache
                 }
+                // Invalid machine ID, sign out
+                await supabase.auth.signOut();
             }
             
-            // Show lock screen
-            el('lockScreen').style.display = 'flex';
+            localStorage.removeItem('nikia_invite_code');
+            document.getElementById('lockScreen').style.display = 'flex';
+        }
 
+        async function initAuth() {
+            currentMachineId = await window.nikia.getMachineId();
+            await checkInvite();
+            
             el('verifyBtn').addEventListener('click', async () => {
                 const code = el('inviteCode').value.trim().toUpperCase();
                 if (!code) return;
@@ -999,30 +1008,40 @@
                 el('verifyBtn').innerText = 'Verifying...';
                 el('lockError').style.display = 'none';
 
-                const { data, error } = await supabase.from('invites').select('*').eq('code', code).single();
+                const email = code + '@nikia.app';
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: code
+                });
                 
-                if (error || !data) {
+                if (error || !data.session) {
                     el('lockError').innerText = 'Invalid invite code.';
                     el('lockError').style.display = 'block';
                     el('verifyBtn').innerText = 'Verify Access';
                     return;
                 }
 
-                if (data.is_used) {
-                    if (data.machine_id !== machineId) {
-                        el('lockError').innerText = 'This code is already bound to another PC.';
-                        el('lockError').style.display = 'block';
-                        el('verifyBtn').innerText = 'Verify Access';
-                        return;
-                    }
-                    // Valid existing bind
-                } else {
-                    // Bind new code to this machine
-                    const { error: updateError } = await supabase.from('invites')
-                        .update({ is_used: true, machine_id: machineId })
-                        .eq('code', code);
-                    
+                currentJwtToken = data.session.access_token;
+
+                // Check machine binding in user metadata
+                let metadata = data.user.user_metadata || {};
+                
+                if (metadata.machine_id && metadata.machine_id !== currentMachineId) {
+                    await supabase.auth.signOut();
+                    el('lockError').innerText = 'This code is already bound to another PC.';
+                    el('lockError').style.display = 'block';
+                    el('verifyBtn').innerText = 'Verify Access';
+                    return;
+                }
+
+                // If not bound yet, update metadata
+                if (!metadata.machine_id) {
+                    const { error: updateError } = await supabase.auth.updateUser({
+                        data: { machine_id: currentMachineId }
+                    });
+                        
                     if (updateError) {
+                        await supabase.auth.signOut();
                         el('lockError').innerText = 'Failed to bind code. Try again.';
                         el('lockError').style.display = 'block';
                         el('verifyBtn').innerText = 'Verify Access';
@@ -1188,7 +1207,7 @@
             if (socket) { socket.close(); socket = null; }
             if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
             currentRoomCode = roomCode.toUpperCase();
-            socket = new WebSocket('wss://cine-sync.cine-sync.workers.dev/ws?room=' + currentRoomCode);
+            socket = new WebSocket('wss://cine-sync.cine-sync.workers.dev/ws?room=' + currentRoomCode + '&token=' + (currentJwtToken || ''));
 
             socket.onopen = function() {
                 el('syncBadge').classList.remove('disconnected');
@@ -1419,7 +1438,9 @@
 
         // TMDB
         function tmdbFetch(path) {
-            return fetch(workerOrigin + '/api/tmdb' + path).then(function(r) { return r.json(); });
+            return fetch(workerOrigin + '/api/tmdb' + path, {
+                headers: { 'Authorization': 'Bearer ' + (currentJwtToken || '') }
+            }).then(function(r) { return r.json(); });
         }
         function posterUrl(path, size) { return path ? TMDB_IMG + (size || 'w342') + path : ''; }
         function backdropUrl(path) { return path ? TMDB_IMG + 'original' + path : ''; }

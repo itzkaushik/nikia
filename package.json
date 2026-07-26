@@ -1,19 +1,21 @@
 {
   "name": "nikia",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Nikia — Watch Together Desktop App",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build:win": "electron-builder --win -p always",
-    "build:mac": "electron-builder --mac -p always",
-    "build": "electron-builder --win --mac -p always"
+    "build:win": "node obfuscate.js && electron-builder --win -p always && node restore.js",
+    "build:mac": "node obfuscate.js && electron-builder --mac -p always && node restore.js",
+    "build": "node obfuscate.js && electron-builder --win --mac -p always && node restore.js"
   },
   "author": "itzkaushik",
   "license": "MIT",
   "devDependencies": {
+    "cheerio": "^1.2.0",
     "electron": "^33.0.0",
-    "electron-builder": "^25.0.0"
+    "electron-builder": "^25.0.0",
+    "javascript-obfuscator": "^5.5.0"
   },
   "repository": "itzkaushik/nikia",
   "build": {
@@ -21,14 +23,14 @@
     "productName": "Nikia",
     "npmRebuild": false,
     "publish": {
-      "provider": "github",
-      "owner": "itzkaushik",
-      "repo": "nikia"
+      "provider": "generic",
+      "url": "https://cine-sync.cine-sync.workers.dev/updates"
     },
     "files": [
       "main.js",
       "preload.js",
-      "index.html"
+      "index.html",
+      "app.obf.js"
     ],
     "win": {
       "target": "nsis",

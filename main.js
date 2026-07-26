@@ -405,7 +405,7 @@ function createWindow() {
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      webSecurity: false,
+      webSecurity: true,
       nodeIntegration: false,
       contextIsolation: true,
       autoplayPolicy: 'no-user-gesture-required'
