@@ -2145,11 +2145,8 @@
                         });
                         card.classList.add('active');
                         
-                        // Switch to player view and load
-                        el('detailsView').style.display = 'none';
-                        el('playerView').style.display = 'block';
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                        loadProvider(currentProvider);
+                        // Show source selection modal (same as Play button)
+                        el('sourceModal').style.display = 'flex';
                     });
                 });
             });
