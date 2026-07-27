@@ -59,7 +59,6 @@ foreach ($folder in $sizes.Keys) {
 $buildDir = Join-Path $PSScriptRoot "build"
 Resize-Image -Image $srcImg -Width 1024 -Height 1024 -OutputPath (Join-Path $buildDir "icon.png")
 Resize-Image -Image $srcImg -Width 512 -Height 512 -OutputPath (Join-Path $buildDir "512x512.png")
-Resize-Image -Image $srcImg -Width 256 -Height 256 -OutputPath (Join-Path $buildDir "icon.ico")
 
 $srcImg.Dispose()
 Write-Host "All icons generated successfully!"

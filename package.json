@@ -47,7 +47,7 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": null,
+      "icon": "build/icon.png",
       "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "mac": {
@@ -61,7 +61,7 @@
           ]
         }
       ],
-      "icon": null
+      "icon": "build/icon.png"
     }
   },
   "dependencies": {
