@@ -366,10 +366,33 @@ const SYNC_BRIDGE_SCRIPT = `
         }
       });
 
-      // Hook existing videos
+      // Hook existing videos in Light DOM
       document.querySelectorAll('video').forEach(hookVideo);
 
-      // Watch for dynamically added videos
+      // Override document.createElement to catch dynamically created videos
+      var originalCreateElement = document.createElement;
+      document.createElement = function(tagName) {
+        var el = originalCreateElement.apply(this, arguments);
+        if (tagName.toLowerCase() === 'video') {
+          hookVideo(el);
+        }
+        return el;
+      };
+
+      // Override prototypes to catch any video that might have slipped through
+      var originalPlay = HTMLMediaElement.prototype.play;
+      HTMLMediaElement.prototype.play = function() {
+        hookVideo(this);
+        return originalPlay.apply(this, arguments);
+      };
+
+      var originalPause = HTMLMediaElement.prototype.pause;
+      HTMLMediaElement.prototype.pause = function() {
+        hookVideo(this);
+        return originalPause.apply(this, arguments);
+      };
+
+      // Watch for dynamically added videos in Light DOM
       var observer = new MutationObserver(function(mutations) {
         for (var m of mutations) {
           for (var node of m.addedNodes) {
