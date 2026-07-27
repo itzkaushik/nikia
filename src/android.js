@@ -19,6 +19,9 @@ window.nikiaMobile = {
       
       if (latest && latest.tag_name && latest.tag_name !== 'v' + currentVersion && latest.tag_name !== currentVersion) {
         if (latest.apk_url) {
+          const apkName = latest.apk_url.split('/').pop();
+          const proxyUrl = 'https://cine-sync.cine-sync.workers.dev/updates/' + encodeURIComponent(apkName);
+
           const overlay = document.createElement('div');
           overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:Inter,sans-serif;';
           overlay.innerHTML = `
@@ -31,7 +34,7 @@ window.nikiaMobile = {
           document.body.appendChild(overlay);
           
           document.getElementById('downloadApkBtn').addEventListener('click', async () => {
-            await Browser.open({ url: latest.apk_url });
+            await Browser.open({ url: proxyUrl });
           });
         }
       }

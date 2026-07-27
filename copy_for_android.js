@@ -32,6 +32,8 @@ html = html.replace(/<div id="torrentProgressBar"[\s\S]*?<\/div>\s*<\/div>/, '')
 // Replace window.nikia calls with window.nikiaMobile (since preload.js isn't used)
 html = html.replace(/window\.nikia/g, 'window.nikiaMobile');
 
+const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+
 // Inject android.js and update checker
 const injectScript = `
   <script src="android.js"></script>
@@ -39,8 +41,7 @@ const injectScript = `
     // Poll to wait until DOM and initAuth is ready
     setTimeout(() => {
       if (window.nikiaMobile && window.nikiaMobile.checkForUpdates) {
-        // Read version from package.json or hardcode 1.0.6
-        window.nikiaMobile.checkForUpdates('1.0.6');
+        window.nikiaMobile.checkForUpdates('${pkg.version}');
       }
     }, 3000);
   </script>
