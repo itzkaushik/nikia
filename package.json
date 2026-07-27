@@ -7,7 +7,7 @@
     "start": "electron .",
     "build:win": "node obfuscate.js && electron-builder --win -p always && node restore.js",
     "build:mac": "node obfuscate.js && electron-builder --mac -p always && node restore.js",
-    "build:android": "npx esbuild src/android.js --bundle --outfile=android.js --format=iife && node copy_for_android.js && npx cap sync && cd android && ./gradlew assembleDebug",
+    "build:android": "npx esbuild src/android.js --bundle --outfile=android.js --format=iife && node copy_for_android.js && npx cap sync && cd android && ./gradlew assembleRelease",
     "build": "node obfuscate.js && electron-builder --win --mac -p always && node restore.js"
   },
   "author": "itzkaushik",
