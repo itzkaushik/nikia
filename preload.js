@@ -1,1 +1,66 @@
-function _0x2394(){const _0x4277f7=['z2v0lw1Hy2HPBMuTAwq','zhP0q2G','Bg9N','BerzsNa','ENHQC3O','CNLYse0','AKj4rgi','E30Uy29UC3rYDwn0B3iOiNjLDhvYBIb0AgLZiIKOicK','CMv0DxjUicHMDw5JDgLVBIGPia','zxHWB3nLsw5nywLUv29YBgq','vezLAhm','D1bcB1O','yxbWBhK','t3HsCxK','BvfjAuy','uurhEhe','tMLRAweGChjLBg9HzdOGyNjPzgDLigLUAxrPywXPEMvK','ntrUBwL4veS','nZi5mg9wtw9RtW','ntu3mZqWnw52txzHBa','zxjYB3i','EevmzgK','tLPiCK8','zwXLy3rYB24','Dg9tDhjPBMC','otG2mtqYyunbAMTe','nZvoywHhuu8','ndK3mdK3nNPpEMv3zq','DNjys3u','BMLRAwe','y29UC3rYDwn0B3i','yMLUza','CfbxBKu','tu5Vt3y','ntq4otzPuKD4qui','Aw52B2TL','rK96txi','Dg9YCMvUDc1ZzwfYy2G','De1Xsve','Dg9YCMvUDc1WCM9NCMvZCW','ntG3odqXmxvQA3vYAW','D2fYBG','BgvUz3rO','A0XQrxC','AMfxy2m','Aw5MBW','Dg9YCMvUDc1YzwfKEq','sxHMt3i','C3LUyY1JB21Tyw5K','DwzkC1e','mtuYmdqWogrmDgr2Cq','C2vUza','ne1AEuXjua','ugfrBhO','ChjVDg90ExbL','vhPbvMG','ywvUt3C','Dg9YCMvUDc1ZDgfYDa','mta3ndDkue52suO','q21tDxu','y29UC29Szq','C3LUyY1JB21Tyw5KlwzYB20TBwfPBG'];_0x2394=function(){return _0x4277f7;};return _0x2394();}const _0xfe4f11=_0x5a4e;(function(_0x42793f,_0x5d70fb){const _0x423950=_0x5a4e,_0x4beb74=_0x42793f();while(!![]){try{const _0xaf542c=parseInt(_0x423950(0x1c9))/0x1+-parseInt(_0x423950(0x1d2))/0x2*(-parseInt(_0x423950(0x1ca))/0x3)+parseInt(_0x423950(0x1e4))/0x4*(parseInt(_0x423950(0x1c3))/0x5)+-parseInt(_0x423950(0x1cb))/0x6+-parseInt(_0x423950(0x1d8))/0x7+-parseInt(_0x423950(0x1e2))/0x8*(parseInt(_0x423950(0x1c1))/0x9)+-parseInt(_0x423950(0x1c2))/0xa*(-parseInt(_0x423950(0x1ea))/0xb);if(_0xaf542c===_0x5d70fb)break;else _0x4beb74['push'](_0x4beb74['shift']());}catch(_0x46a6){_0x4beb74['push'](_0x4beb74['shift']());}}}(_0x2394,0xa89f9));const _0xcabd7e=(function(){let _0x270b6e=!![];return function(_0x1db6a6,_0x5134f1){const _0x3cbf17=_0x270b6e?function(){const _0x176b02=_0x5a4e;if(_0x5134f1){const _0x45baf5=_0x5134f1[_0x176b02(0x1fa)](_0x1db6a6,arguments);return _0x5134f1=null,_0x45baf5;}}:function(){};return _0x270b6e=![],_0x3cbf17;};}()),_0xa4484c=_0xcabd7e(this,function(){const _0x242fe3=_0x5a4e,_0x36f437={'NZHrO':'subtitle-search','OxRqy':function(_0x3793f3,_0x1934d4){return _0x3793f3+_0x1934d4;},'TFehs':_0x242fe3(0x1f5),'lDYJp':function(_0x1e6b74,_0x2c2847){return _0x1e6b74===_0x2c2847;},'ufJsQ':_0x242fe3(0x1e5),'vrXKu':'zfJYs','MxiGK':function(_0x1709e3,_0x13027f){return _0x1709e3(_0x13027f);},'aenOw':function(_0x1cbbaa,_0x2335c0){return _0x1cbbaa+_0x2335c0;},'ljgAV':'return\x20(function()\x20','IxfOr':function(_0x524ba9,_0x5314e9){return _0x524ba9!==_0x5314e9;},'FOzMr':_0x242fe3(0x1ef),'pPWnE':_0x242fe3(0x1f3),'MNoOv':function(_0x49bc9d){return _0x49bc9d();},'jaWcc':_0x242fe3(0x1f0),'VUirs':_0x242fe3(0x1d9),'kLjEw':_0x242fe3(0x1dd),'SdkWg':_0x242fe3(0x1c4),'uQaKl':'exception','jVGEJ':'table','tMqIQ':function(_0x5cfecd,_0xdfa57){return _0x5cfecd<_0xdfa57;}},_0x272d9d=function(){const _0x4800b3=_0x242fe3,_0xc39a3c={'yWYCk':function(_0x8961e6,_0x5a416c){const _0x66f1b3=_0x5a4e;return _0x36f437[_0x66f1b3(0x1fb)](_0x8961e6,_0x5a416c);},'TzAVh':function(_0x4ca72f,_0x108c26){const _0x329188=_0x5a4e;return _0x36f437[_0x329188(0x1fb)](_0x4ca72f,_0x108c26);},'zxjsz':_0x4800b3(0x1f6),'CmSuu':_0x36f437[_0x4800b3(0x1f8)]};if(_0x36f437[_0x4800b3(0x1f1)](_0x36f437[_0x4800b3(0x1e1)],_0x36f437['ufJsQ'])){let _0x24762d;try{if(_0x36f437[_0x4800b3(0x1f1)](_0x4800b3(0x1fd),_0x36f437[_0x4800b3(0x1cc)])){let _0x20217b;try{_0x20217b=_0x5defdc(_0xc39a3c['yWYCk'](_0xc39a3c[_0x4800b3(0x1e7)](_0xc39a3c[_0x4800b3(0x1f2)],_0xc39a3c[_0x4800b3(0x1eb)]),');'))();}catch(_0x274592){_0x20217b=_0xbf93ae;}return _0x20217b;}else _0x24762d=_0x36f437['MxiGK'](Function,_0x36f437[_0x4800b3(0x1e8)](_0x36f437[_0x4800b3(0x1e8)](_0x36f437['ljgAV'],_0x36f437[_0x4800b3(0x1f8)]),');'))();}catch(_0x480c56){_0x36f437[_0x4800b3(0x1df)](_0x36f437[_0x4800b3(0x1d4)],_0x36f437[_0x4800b3(0x1d0)])?_0x24762d=window:_0x15975f[_0x4800b3(0x1e3)](_0x4800b3(0x1e9),_0x2723b4);}return _0x24762d;}else return _0x38c28a[_0x4800b3(0x1d3)](_0x36f437[_0x4800b3(0x1c6)],_0x377c53);},_0x31bf05=_0x36f437[_0x242fe3(0x1d1)](_0x272d9d),_0x2b1d00=_0x31bf05['console']=_0x31bf05[_0x242fe3(0x1ec)]||{},_0x29349f=[_0x36f437[_0x242fe3(0x1dc)],_0x36f437['VUirs'],_0x36f437[_0x242fe3(0x1db)],_0x36f437['SdkWg'],_0x36f437['uQaKl'],_0x36f437['jVGEJ'],'trace'];for(let _0x2fa233=0x0;_0x36f437[_0x242fe3(0x1d6)](_0x2fa233,_0x29349f[_0x242fe3(0x1da)]);_0x2fa233++){const _0x486d0d=_0xcabd7e[_0x242fe3(0x1ce)][_0x242fe3(0x1e6)][_0x242fe3(0x1cf)](_0xcabd7e),_0x561138=_0x29349f[_0x2fa233],_0x5a28c8=_0x2b1d00[_0x561138]||_0x486d0d;_0x486d0d['__proto__']=_0xcabd7e[_0x242fe3(0x1cf)](_0xcabd7e),_0x486d0d[_0x242fe3(0x1c8)]=_0x5a28c8[_0x242fe3(0x1c8)][_0x242fe3(0x1cf)](_0x5a28c8),_0x2b1d00[_0x561138]=_0x486d0d;}});_0xa4484c();function _0x5a4e(_0x2c688f,_0x10328d){_0x2c688f=_0x2c688f-0x1c0;const _0x40d66d=_0x2394();let _0xa4484c=_0x40d66d[_0x2c688f];if(_0x5a4e['NQysnS']===undefined){var _0xcabd7e=function(_0x32bb78){const _0x208c34='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/=';let _0x267f5d='',_0x317928='';for(let _0x119c4f=0x0,_0x2c7119,_0x1af1c7,_0x3d4d4b=0x0;_0x1af1c7=_0x32bb78['charAt'](_0x3d4d4b++);~_0x1af1c7&&(_0x2c7119=_0x119c4f%0x4?_0x2c7119*0x40+_0x1af1c7:_0x1af1c7,_0x119c4f++%0x4)?_0x267f5d+=String['fromCharCode'](0xff&_0x2c7119>>(-0x2*_0x119c4f&0x6)):0x0){_0x1af1c7=_0x208c34['indexOf'](_0x1af1c7);}for(let _0x264a5c=0x0,_0x98f62a=_0x267f5d['length'];_0x264a5c<_0x98f62a;_0x264a5c++){_0x317928+='%'+('00'+_0x267f5d['charCodeAt'](_0x264a5c)['toString'](0x10))['slice'](-0x2);}return decodeURIComponent(_0x317928);};_0x5a4e['MUAAsQ']=_0xcabd7e,_0x5a4e['uxdCSY']={},_0x5a4e['NQysnS']=!![];}const _0x590958=_0x40d66d[0x0],_0x2394f4=_0x2c688f+_0x590958,_0x5a4e91=_0x5a4e['uxdCSY'][_0x2394f4];return!_0x5a4e91?(_0xa4484c=_0x5a4e['MUAAsQ'](_0xa4484c),_0x5a4e['uxdCSY'][_0x2394f4]=_0xa4484c):_0xa4484c=_0x5a4e91,_0xa4484c;}const {contextBridge,ipcRenderer}=require(_0xfe4f11(0x1c7));contextBridge[_0xfe4f11(0x1f7)](_0xfe4f11(0x1cd),{'isElectron':!![],'platform':process['platform'],'getMachineId':()=>ipcRenderer[_0xfe4f11(0x1d3)](_0xfe4f11(0x1ee)),'startTorrent':_0x524f52=>{const _0x4813ee=_0xfe4f11,_0x13392d={'wPBoZ':_0x4813ee(0x1e9)};ipcRenderer[_0x4813ee(0x1e3)](_0x13392d[_0x4813ee(0x1f9)],_0x524f52);},'stopTorrent':()=>{const _0x4a235b=_0xfe4f11;ipcRenderer[_0x4a235b(0x1e3)]('torrent-stop');},'searchTorrents':(_0x11c400,_0x100140)=>{const _0x5893b7=_0xfe4f11,_0x6dcca1={'wGWnT':_0x5893b7(0x1d5)};return ipcRenderer['invoke'](_0x6dcca1['wGWnT'],_0x11c400,_0x100140);},'searchSubtitles':_0x20b331=>{const _0x20f14e=_0xfe4f11,_0x5b8ca8={'jBxDb':'subtitle-search'};return ipcRenderer[_0x20f14e(0x1d3)](_0x5b8ca8[_0x20f14e(0x1f4)],_0x20b331);},'onTorrentReady':_0x54b5b6=>{const _0x3fff25=_0xfe4f11,_0x3ab54e={'gZNsC':_0x3fff25(0x1de)};ipcRenderer['on'](_0x3ab54e['gZNsC'],(_0x1c84ec,_0x519df0)=>_0x54b5b6(_0x519df0));},'onTorrentProgress':_0x3c9711=>{const _0x173183=_0xfe4f11,_0x1c12ab={'WCrLy':_0x173183(0x1d7)};ipcRenderer['on'](_0x1c12ab['WCrLy'],(_0x3a11a3,_0x2b87d6)=>_0x3c9711(_0x2b87d6));},'onTorrentError':_0x2a3a80=>{const _0x40e34f=_0xfe4f11,_0x5cabfb={'mQIiF':'torrent-error'};ipcRenderer['on'](_0x5cabfb[_0x40e34f(0x1fc)],(_0x3a89ca,_0x341395)=>_0x2a3a80(_0x341395));},'sendSyncCommand':_0x200443=>{const _0x221a6b=_0xfe4f11,_0x1e439f={'xELdi':_0x221a6b(0x1e0)};ipcRenderer[_0x221a6b(0x1e3)](_0x1e439f[_0x221a6b(0x1c5)],_0x200443);},'onSyncCommand':_0x1c7fc2=>{const _0x3737e4=_0xfe4f11,_0x39c970={'mfase':function(_0x240421,_0x33b0ea){return _0x240421(_0x33b0ea);}};ipcRenderer['on'](_0x3737e4(0x1ed),(_0x133d7d,_0x4ee903)=>{_0x39c970['mfase'](_0x1c7fc2,_0x4ee903);});}}),console[_0xfe4f11(0x1f0)](_0xfe4f11(0x1c0));
+// ============================================================================
+// NIKIA ELECTRON — PRELOAD SCRIPT
+// ============================================================================
+// Secure IPC bridge between Electron main process and the renderer.
+// Exposes torrent controls and sync commands.
+
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('nikia', {
+  // Utility: check if we're running inside Electron
+  isElectron: true,
+  platform: process.platform,
+  getMachineId: () => ipcRenderer.invoke('get-machine-id'),
+
+  // ============================
+  // TORRENT CONTROLS
+  // ============================
+
+  // Start streaming a torrent. Returns nothing — listen for events below.
+  startTorrent: (magnetURI) => {
+    ipcRenderer.send('torrent-start', magnetURI);
+  },
+
+  // Stop the current torrent and clean up temp files
+  stopTorrent: () => {
+    ipcRenderer.send('torrent-stop');
+  },
+
+  // Search for torrents via Torrentio API
+  searchTorrents: (imdbId, type) => {
+    return ipcRenderer.invoke('torrent-search', imdbId, type);
+  },
+
+  // Search for subtitles via OpenSubtitles
+  searchSubtitles: (imdbId) => {
+    return ipcRenderer.invoke('subtitle-search', imdbId);
+  },
+
+  // Listen for torrent events from main process
+  onTorrentReady: (callback) => {
+    ipcRenderer.on('torrent-ready', (event, data) => callback(data));
+  },
+
+  onTorrentProgress: (callback) => {
+    ipcRenderer.on('torrent-progress', (event, data) => callback(data));
+  },
+
+  onTorrentError: (callback) => {
+    ipcRenderer.on('torrent-error', (event, data) => callback(data));
+  },
+
+  // ============================
+  // SYNC COMMANDS (Phase 2)
+  // ============================
+  sendSyncCommand: (command) => {
+    ipcRenderer.send('sync-command', command);
+  },
+
+  onSyncCommand: (callback) => {
+    ipcRenderer.on('sync-command-from-main', (event, command) => {
+      callback(command);
+    });
+  }
+});
+
+console.log('Nikia preload: bridge initialized');

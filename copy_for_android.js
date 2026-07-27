@@ -38,6 +38,9 @@ html = html.replace(
   '<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">\n    <meta name="theme-color" content="#0a0a0f">\n    <meta name="mobile-web-app-capable" content="yes">\n    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">'
 );
 
+// Strip any previous android.js injection if present
+html = html.replace(/<script src="android\.js"><\/script>[\s\S]*?<\/script>/gi, '');
+
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 
 // Inject android.js and update checker

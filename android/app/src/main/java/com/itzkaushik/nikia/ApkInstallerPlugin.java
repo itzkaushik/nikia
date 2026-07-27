@@ -81,12 +81,24 @@ public class ApkInstallerPlugin extends Plugin {
 
     private void installApk(String filename) {
         try {
-            File file = new File(getContext().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), filename);
+            Context context = getContext();
+            File file = new File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), filename);
             if (!file.exists()) return;
+
+            // Check if unknown app installation permission is granted on Android O (API 26+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (!context.getPackageManager().canRequestPackageInstalls()) {
+                    Intent manageIntent = new Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+                            .setData(Uri.parse("package:" + context.getPackageName()))
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    context.startActivity(manageIntent);
+                    return;
+                }
+            }
 
             Uri apkUri;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                apkUri = FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", file);
+                apkUri = FileProvider.getUriForFile(context, context.getPackageName() + ".fileprovider", file);
             } else {
                 apkUri = Uri.fromFile(file);
             }
@@ -95,7 +107,7 @@ public class ApkInstallerPlugin extends Plugin {
             intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            getContext().startActivity(intent);
+            context.startActivity(intent);
         } catch (Exception e) {
             e.printStackTrace();
         }
