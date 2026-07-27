@@ -59,3 +59,28 @@ html = html.replace('</body>', injectScript);
 fs.writeFileSync('android_dist/index.html', html, 'utf8');
 
 console.log('Successfully prepared web assets for Android in android_dist/');
+
+// 4. Sync version to Android build.gradle
+try {
+  const gradlePath = path.join('android', 'app', 'build.gradle');
+  if (fs.existsSync(gradlePath)) {
+    let gradle = fs.readFileSync(gradlePath, 'utf8');
+    
+    // Extract version parts (e.g., "1.0.22" -> 22 or 10022)
+    const versionParts = pkg.version.split('.');
+    let vCode = 1;
+    if (versionParts.length === 3) {
+      // Create a stable versionCode like 10022 for 1.0.22
+      vCode = parseInt(versionParts[0]) * 10000 + parseInt(versionParts[1]) * 100 + parseInt(versionParts[2]);
+    }
+    
+    // Replace versionCode and versionName
+    gradle = gradle.replace(/versionCode\s+\d+/, `versionCode ${vCode}`);
+    gradle = gradle.replace(/versionName\s+".*?"/, `versionName "${pkg.version}"`);
+    
+    fs.writeFileSync(gradlePath, gradle, 'utf8');
+    console.log(`Synced Android version to ${pkg.version} (code ${vCode}) in build.gradle`);
+  }
+} catch (e) {
+  console.error('Failed to sync Android version to build.gradle:', e);
+}
