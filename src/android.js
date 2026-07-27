@@ -1,6 +1,7 @@
 import { Device } from '@capacitor/device';
 import { Browser } from '@capacitor/browser';
 import { App } from '@capacitor/app';
+import { registerPlugin } from '@capacitor/core';
 
 // Handle Android hardware back button
 App.addListener('backButton', ({ canGoBack }) => {
@@ -100,7 +101,6 @@ window.nikiaMobile = {
             btn.style.pointerEvents = "none";
             
             try {
-              const { registerPlugin } = require('@capacitor/core');
               const ApkInstaller = registerPlugin('ApkInstaller');
               await ApkInstaller.downloadAndInstall({ url: proxyUrl, filename: apkName });
               btn.innerText = "Installing...";
