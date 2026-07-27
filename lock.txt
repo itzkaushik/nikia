@@ -1,0 +1,25 @@
+    <div id="lockScreen">
+        <h1 style="font-size:32px; margin-bottom:10px;">Nikia</h1>
+        <p style="color:#a0a0b8; margin-bottom:30px;">Private Watch Party</p>
+        
+        <div id="requestForm" style="display:none;">
+            <p style="color:#e91e8c; margin-bottom:15px; font-weight:bold;">Unauthorized Device</p>
+            <input type="text" id="reqName" placeholder="Your Name" style="width:100%; padding:15px; margin-bottom:15px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:white; outline:none; font-family:inherit;">
+            <input type="email" id="reqEmail" placeholder="Your Email" style="width:100%; padding:15px; margin-bottom:20px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:white; outline:none; font-family:inherit;">
+            <button id="requestBtn" class="btn btn-primary" style="width:100%;">Request Access</button>
+        </div>
+        
+        <div id="pendingStatus" style="display:none;">
+            <div class="loader" style="margin: 0 auto 20px;"></div>
+            <p style="color:#e91e8c; margin-bottom:10px; font-weight:bold;">Request Sent</p>
+            <p style="color:#a0a0b8; font-size:14px; margin-bottom:20px;">Waiting for admin approval...</p>
+            <p style="color:#505068; font-size:12px;">Contact <span style="color:white;">nikiasync@yahoo.com</span> if this takes a while.</p>
+        </div>
+        
+        <div id="bannedStatus" style="display:none;">
+            <p style="color:#e91e8c; margin-bottom:10px; font-weight:bold;">Device Banned</p>
+            <p style="color:#a0a0b8; font-size:14px;">This device is permanently blocked.</p>
+        </div>
+
+        <p id="lockError" style="color:#e91e8c; margin-top:15px; display:none; font-size:14px;"></p>
+    </div>

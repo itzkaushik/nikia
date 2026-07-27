@@ -661,15 +661,30 @@
 </head>
 <body>
     <!-- Lock Screen -->
-    <div id="lockScreen">
-        <div class="lock-box">
-            <svg viewBox="0 0 32 32" fill="none" style="width: 48px; height: 48px; margin-bottom: 20px;"><rect width="32" height="32" rx="8" fill="#e91e8c"/><path d="M11 8l10 8-10 8V8z" fill="white"/></svg>
-            <h2>Welcome to Nikia</h2>
-            <p>This is a private build. Please enter your invite code to continue.</p>
-            <input type="text" id="inviteCode" placeholder="NIKIA-XXXXXX-XXXX" spellcheck="false" autocomplete="off">
-            <button id="verifyBtn">Verify Access</button>
-            <p id="lockError">Invalid or already claimed code.</p>
+    <div id="lockScreen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#101018; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; text-align:center;">
+        <h1 style="font-size:32px; margin-bottom:10px;">Nikia</h1>
+        <p style="color:#a0a0b8; margin-bottom:30px;">Private Watch Party</p>
+        
+        <div id="requestForm" style="display:none; width:100%; max-width:400px;">
+            <p style="color:#e91e8c; margin-bottom:15px; font-weight:bold;">Unauthorized Device</p>
+            <input type="text" id="reqName" placeholder="Your Name" style="width:100%; padding:15px; margin-bottom:15px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:white; outline:none; font-family:inherit;">
+            <input type="email" id="reqEmail" placeholder="Your Email" style="width:100%; padding:15px; margin-bottom:20px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:white; outline:none; font-family:inherit;">
+            <button id="requestBtn" class="btn btn-primary" style="width:100%;">Request Access</button>
         </div>
+        
+        <div id="pendingStatus" style="display:none; width:100%; max-width:400px;">
+            <div class="loader" style="margin: 0 auto 20px;"></div>
+            <p style="color:#e91e8c; margin-bottom:10px; font-weight:bold;">Request Sent</p>
+            <p style="color:#a0a0b8; font-size:14px; margin-bottom:20px;">Waiting for admin approval...</p>
+        </div>
+        
+        <div id="bannedStatus" style="display:none; width:100%; max-width:400px;">
+            <p style="color:#e91e8c; margin-bottom:10px; font-weight:bold;">Device Banned</p>
+            <p style="color:#a0a0b8; font-size:14px;">This device is permanently blocked.</p>
+        </div>
+
+        <p id="lockError" style="color:#e91e8c; margin-top:15px; display:none; font-size:14px;"></p>
+        <p style="color:#505068; font-size:12px; margin-top:20px;">Contact <span style="color:white;">nikiasync@yahoo.com</span> for support.</p>
     </div>
 
     <!-- Navbar -->
@@ -991,228 +1006,95 @@
         let currentMachineId = null;
         let currentJwtToken = null;
 
-        async function checkInvite() {
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            if (session) {
-                currentJwtToken = session.access_token;
-                const metadata = session.user.user_metadata || {};
-                if (metadata.machine_id === currentMachineId) {
-                    document.getElementById('lockScreen').style.display = 'none';
-                    localStorage.setItem('nikia_invite_code', session.user.email.split('@')[0]);
-                    loadHomepage(); // Render the homepage since auth succeeded
-                    return;
-                }
-                // Invalid machine ID, sign out
-                await supabase.auth.signOut();
-            }
-            
-            localStorage.removeItem('nikia_invite_code');
-            document.getElementById('lockScreen').style.display = 'flex';
-        }
+        let authPollInterval = null;
 
         async function initAuth() {
-            currentMachineId = await window.nikia.getMachineId();
-            await checkInvite();
+            currentMachineId = await window.nikiaMobile?.getMachineId() || await window.nikia?.getMachineId() || 'unknown-device';
+            checkDeviceStatus();
+        }
+
+        async function checkDeviceStatus() {
+            try {
+                const { data, error } = await supabase.rpc('check_device_status', { p_machine_id: currentMachineId });
+                const status = (typeof data === 'string') ? data : (data?.status || null);
+                
+                if (error || !status) {
+                    el('requestForm').style.display = 'block';
+                    el('pendingStatus').style.display = 'none';
+                    el('bannedStatus').style.display = 'none';
+                } else if (status === 'pending') {
+                    el('requestForm').style.display = 'none';
+                    el('pendingStatus').style.display = 'block';
+                    el('bannedStatus').style.display = 'none';
+                    startPolling();
+                } else if (status === 'banned') {
+                    el('requestForm').style.display = 'none';
+                    el('pendingStatus').style.display = 'none';
+                    el('bannedStatus').style.display = 'block';
+                    stopPolling();
+                } else if (status === 'approved') {
+                    stopPolling();
+                    el('lockScreen').style.opacity = '0';
+                    setTimeout(() => {
+                        el('lockScreen').style.display = 'none';
+                        el('app').style.display = 'flex';
+                        initApp();
+                    }, 300);
+                }
+            } catch(e) {
+                console.error("Supabase error:", e);
+                el('lockError').innerText = 'Could not connect to server.';
+                el('lockError').style.display = 'block';
+            }
+        }
+
+        function startPolling() {
+            if (authPollInterval) return;
+            authPollInterval = setInterval(checkDeviceStatus, 5000);
+        }
+        function stopPolling() {
+            if (authPollInterval) {
+                clearInterval(authPollInterval);
+                authPollInterval = null;
+            }
+        }
+
+        document.getElementById('requestBtn').addEventListener('click', async () => {
+            const name = document.getElementById('reqName').value.trim();
+            const email = document.getElementById('reqEmail').value.trim();
             
-            el('verifyBtn').addEventListener('click', async () => {
-                const code = el('inviteCode').value.trim().toUpperCase();
-                if (!code) return;
+            if (!name || !email) {
+                el('lockError').innerText = 'Please enter name and email.';
+                el('lockError').style.display = 'block';
+                return;
+            }
+            if (name.length > 50 || email.length > 100 || name.includes('<') || email.includes('<')) {
+                el('lockError').innerText = 'Invalid input format.';
+                el('lockError').style.display = 'block';
+                return;
+            }
 
-                el('verifyBtn').innerText = 'Verifying...';
-                el('lockError').style.display = 'none';
+            el('requestBtn').innerText = 'Sending...';
+            el('lockError').style.display = 'none';
 
-                const email = code + '@nikia.app';
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email: email,
-                    password: code
-                });
-                
-                if (error || !data.session) {
-                    el('lockError').innerText = 'Invalid invite code.';
-                    el('lockError').style.display = 'block';
-                    el('verifyBtn').innerText = 'Verify Access';
-                    return;
-                }
+            const { error } = await supabase.from('devices').insert([{
+                machine_id: currentMachineId,
+                name: name,
+                email: email,
+                status: 'pending'
+            }]);
 
-                currentJwtToken = data.session.access_token;
-
-                // Check machine binding in user metadata
-                let metadata = data.user.user_metadata || {};
-                
-                if (metadata.machine_id && metadata.machine_id !== currentMachineId) {
-                    await supabase.auth.signOut();
-                    el('lockError').innerText = 'This code is already bound to another PC.';
-                    el('lockError').style.display = 'block';
-                    el('verifyBtn').innerText = 'Verify Access';
-                    return;
-                }
-
-                // If not bound yet, update metadata
-                if (!metadata.machine_id) {
-                    const { error: updateError } = await supabase.auth.updateUser({
-                        data: { machine_id: currentMachineId }
-                    });
-                        
-                    if (updateError) {
-                        await supabase.auth.signOut();
-                        el('lockError').innerText = 'Failed to bind code. Try again.';
-                        el('lockError').style.display = 'block';
-                        el('verifyBtn').innerText = 'Verify Access';
-                        return;
-                    }
-
-                    // Force refresh so the newly issued token has the machine_id inside its payload
-                    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-                    if (!refreshError && refreshData.session) {
-                        currentJwtToken = refreshData.session.access_token;
-                    } else {
-                        await supabase.auth.signOut();
-                        el('lockError').innerText = 'Failed to secure session. Try again.';
-                        el('lockError').style.display = 'block';
-                        el('verifyBtn').innerText = 'Verify Access';
-                        return;
-                    }
-                }
-
-                // Success
-                localStorage.setItem('nikia_invite_code', code);
-                el('lockScreen').style.display = 'none';
-                loadHomepage(); // Render the homepage since auth succeeded
-            });
-        }
+            if (error) {
+                console.error(error);
+                el('lockError').innerText = 'Failed to request access. Try again.';
+                el('lockError').style.display = 'block';
+                el('requestBtn').innerText = 'Request Access';
+            } else {
+                checkDeviceStatus();
+            }
+        });
+        
         initAuth();
-        var homePage = el('homePage');
-        var watchPage = el('watchPage');
-        var searchOverlay = el('searchOverlay');
-        var searchInput = el('searchInput');
-        var searchResults = el('searchResults');
-        var heroBg = el('heroBg');
-        var heroTitle = el('heroTitle');
-        var heroMeta = el('heroMeta');
-        var heroDesc = el('heroDesc');
-        var navbar = el('navbar');
-
-        // --- Custom Video.js Buttons ---
-        var Button = videojs.getComponent('Button');
-        
-        class SkipBackBtn extends Button {
-            constructor(player, options) {
-                super(player, options);
-                this.controlText('Skip Back 10s');
-                this.el().innerHTML = '<svg fill="currentColor" viewBox="0 0 24 24" width="20" height="20" style="margin-top:5px"><path d="M12.5 3C17.15 3 21 6.85 21 11.5s-3.85 8.5-8.5 8.5-8.5-3.85-8.5-8.5h-2c0 5.8 4.7 10.5 10.5 10.5S23 17.3 23 11.5 18.3 1 12.5 1 4 4.14 4 8H1l4 4 4-4H6c0-3.59 2.91-6.5 6.5-6.5z"/></svg>';
-            }
-            handleClick() { player.currentTime(Math.max(0, player.currentTime() - 10)); }
-        }
-        
-        class SkipForwardBtn extends Button {
-            constructor(player, options) {
-                super(player, options);
-                this.controlText('Skip Forward 10s');
-                this.el().innerHTML = '<svg fill="currentColor" viewBox="0 0 24 24" width="20" height="20" style="margin-top:5px"><path d="M11.5 3C6.85 3 3 6.85 3 11.5s3.85 8.5 8.5 8.5 8.5-3.85 8.5-8.5h2c0 5.8-4.7 10.5-10.5 10.5S1 17.3 1 11.5 5.7 1 11.5 1 20 4.14 20 8h3l-4 4-4-4h3c0-3.59-2.91-6.5-6.5-6.5z"/></svg>';
-            }
-            handleClick() { player.currentTime(player.currentTime() + 10); }
-        }
-
-        videojs.registerComponent('SkipBackBtn', SkipBackBtn);
-        videojs.registerComponent('SkipForwardBtn', SkipForwardBtn);
-
-        var player = videojs('my-video', {
-            playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
-            controlBar: {
-                children: [
-                    'playToggle',
-                    'SkipBackBtn',
-                    'SkipForwardBtn',
-                    'volumePanel',
-                    'currentTimeDisplay',
-                    'timeDivider',
-                    'durationDisplay',
-                    'progressControl',
-                    'liveDisplay',
-                    'seekToLive',
-                    'remainingTimeDisplay',
-                    'customControlSpacer',
-                    'playbackRateMenuButton',
-                    'chaptersButton',
-                    'descriptionsButton',
-                    'subsCapsButton',
-                    'audioTrackButton',
-                    'pictureInPictureToggle',
-                    'fullscreenToggle'
-                ]
-            }
-        });
-
-        // Subtitle Drag & Drop Fallback
-        var playerWrap = document.querySelector('.player-wrap');
-        playerWrap.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            playerWrap.style.boxShadow = 'inset 0 0 50px rgba(233, 30, 140, 0.8)';
-        });
-        playerWrap.addEventListener('dragleave', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            playerWrap.style.boxShadow = 'none';
-        });
-        playerWrap.addEventListener('drop', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            playerWrap.style.boxShadow = 'none';
-            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                var file = e.dataTransfer.files[0];
-                var ext = file.name.split('.').pop().toLowerCase();
-                if (ext === 'srt' || ext === 'vtt') {
-                    loadLocalSubtitleFile(file);
-                } else {
-                    alert('Please drop an .srt or .vtt subtitle file.');
-                }
-            }
-        });
-
-        function loadLocalSubtitleFile(file) {
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                var content = e.target.result;
-                if (file.name.endsWith('.srt')) {
-                    content = srtToVtt(content);
-                }
-                var blob = new Blob([content], { type: 'text/vtt' });
-                var url = URL.createObjectURL(blob);
-                
-                // Clear existing tracks first
-                var tracks = player.remoteTextTracks();
-                var i = tracks.length;
-                while (i--) player.removeRemoteTextTrack(tracks[i]);
-
-                player.addRemoteTextTrack({
-                    kind: 'captions',
-                    src: url,
-                    srclang: 'en',
-                    label: file.name,
-                    default: true
-                }, false);
-            };
-            reader.readAsText(file);
-        }
-
-        // Extremely simple SRT to VTT converter in-memory
-        function srtToVtt(srt) {
-            var vtt = "WEBVTT\n\n";
-            var lines = srt.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-            for (var i = 0; i < lines.length; i++) {
-                if (lines[i].match(/^\d+$/)) {
-                    // skip index
-                } else if (lines[i].includes('-->')) {
-                    // replace commas with dots in timestamps
-                    vtt += lines[i].replace(/,/g, ".") + "\n";
-                } else {
-                    vtt += lines[i] + "\n";
-                }
-            }
-            return vtt;
-        }
 
         // ============================
         // ROOM-BASED WEBSOCKET SYSTEM
@@ -1250,7 +1132,6 @@
                 el('roomConnected').style.display = 'block';
                 el('roomCodeDisplay').textContent = currentRoomCode;
 
-                // Start Heartbeat if Host
                 if (amIHost) {
                     heartbeatInterval = setInterval(function() {
                         if (socket && socket.readyState === WebSocket.OPEN) {
@@ -1258,9 +1139,8 @@
                             if (currentPlayMode === 'torrent' && player) {
                                 t = player.currentTime();
                             } else if (el('embedFrame').contentWindow) {
-                                // Request time from iframe bridge
                                 el('embedFrame').contentWindow.postMessage({ type: 'Nikia_SYNC_COMMAND', action: 'heartbeat_req' }, '*');
-                                return; // the bridge will respond with Nikia_IFRAME_EVENT heartbeat
+                                return; 
                             }
                             wsSend({ type: 'sync_heartbeat', currentTime: t });
                         }
@@ -1285,7 +1165,6 @@
                     return;
                 }
                 
-                // Auto-reconnect if we didn't deliberately disconnect
                 if (currentRoomCode) {
                     setTimeout(function() {
                         if (currentRoomCode) connectToRoom(currentRoomCode);
@@ -1296,32 +1175,24 @@
                 var data = JSON.parse(event.data);
                 console.log('WS received:', data.type, data);
 
-                // --- SYNC_MEDIA: The other user selected a movie ---
                 if (data.type === 'sync_media') {
-                    if (!amIHost) {
-                        console.log('Guest: Navigating to synced media:', data.id, data.mediaType);
-                        openWatch(data.id, data.mediaType, true); // true = fromSync
-                    }
+                    if (!amIHost) openWatch(data.id, data.mediaType, true); 
                     return;
                 }
 
-                // --- SYNC_START: The other user clicked Play (loaded a provider) ---
                 if (data.type === 'sync_start') {
                     if (!amIHost) {
-                        console.log('Guest: Auto-starting provider:', data.provider, 'S' + data.season + 'E' + data.episode);
                         currentSeason = data.season || 1;
                         currentEpisode = data.episode || 1;
                         el('detailsView').style.display = 'none';
                         el('playerView').style.display = 'block';
-                        loadProvider(data.provider, true); // true = fromSync
+                        loadProvider(data.provider, true); 
                     }
                     return;
                 }
 
-                // --- SYNC_TORRENT: The other user selected a torrent ---
                 if (data.type === 'sync_torrent') {
                     if (!amIHost) {
-                        console.log('Guest: Auto-starting torrent:', data.title);
                         currentPlayMode = 'torrent';
                         el('detailsView').style.display = 'none';
                         el('playerView').style.display = 'block';
@@ -1339,29 +1210,21 @@
                     return;
                 }
 
-                // --- PLAY/PAUSE/SEEK: Forward to the correct player ---
                 if (data.type === 'play' || data.type === 'pause' || data.type === 'seek' || data.type === 'sync_heartbeat') {
-                    if (data.type !== 'sync_heartbeat') {
-                        console.log('Sync command received:', data.type, 'at', data.currentTime);
-                    }
-                    
                     if (data.type === 'sync_heartbeat') {
-                        if (amIHost) return; // Host sends heartbeats, doesn't receive them
+                        if (amIHost) return; 
                         var currentT = 0;
                         if (currentPlayMode === 'torrent' && player) {
                             currentT = player.currentTime();
                         } else if (window.__lastKnownIframeTime) {
                             currentT = window.__lastKnownIframeTime;
                         } else {
-                            // If we don't know our current time yet, just do a seek to sync up
                             data.type = 'seek';
                         }
                         
-                        // If drift is less than 2 seconds, ignore it
                         if (data.type === 'sync_heartbeat' && Math.abs(currentT - data.currentTime) < 2) {
                             return;
                         } else if (data.type === 'sync_heartbeat') {
-                            console.log('Drift detected! Snapping to Host time:', data.currentTime);
                             data.type = 'seek';
                         }
                     }
@@ -1369,7 +1232,6 @@
                     lastSyncTime = Date.now();
                     
                     if (currentPlayMode === 'torrent') {
-                        // Apply directly to Video.js player
                         if (data.type === 'play') {
                             player.currentTime(data.currentTime);
                             player.play();
@@ -1380,7 +1242,6 @@
                             player.currentTime(data.currentTime);
                         }
                     } else {
-                        // Send the command DOWN into the iframe via postMessage
                         var iframe = el('embedFrame');
                         if (iframe && iframe.contentWindow) {
                             iframe.contentWindow.postMessage({
@@ -1390,8 +1251,6 @@
                             }, '*');
                         }
                     }
-                    // We remove the 500ms block since the iframe handles its own echo prevention perfectly now
-                    // We keep a small 100ms throttle in the iframe receiver above
                     return;
                 }
             };

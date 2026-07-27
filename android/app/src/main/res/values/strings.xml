@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Nikia</string>
+    <string name="title_activity_main">Nikia</string>
+    <string name="package_name">com.itzkaushik.nikia</string>
+    <string name="custom_url_scheme">com.itzkaushik.nikia</string>
+</resources>

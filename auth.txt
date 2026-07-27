@@ -1,0 +1,88 @@
+        let authPollInterval = null;
+
+        async function initAuth() {
+            currentMachineId = await window.nikiaMobile?.getMachineId() || await window.nikia?.getMachineId() || 'unknown-device';
+            
+            checkDeviceStatus();
+        }
+
+        async function checkDeviceStatus() {
+            try {
+                // Fetch device status
+                const { data, error } = await supabase.from('devices').select('status').eq('machine_id', currentMachineId).single();
+                
+                if (error || !data) {
+                    // Not found = Show Request Form
+                    el('requestForm').style.display = 'block';
+                    el('pendingStatus').style.display = 'none';
+                    el('bannedStatus').style.display = 'none';
+                } else if (data.status === 'pending') {
+                    // Pending = Show Waiting
+                    el('requestForm').style.display = 'none';
+                    el('pendingStatus').style.display = 'block';
+                    el('bannedStatus').style.display = 'none';
+                    startPolling();
+                } else if (data.status === 'banned') {
+                    // Banned
+                    el('requestForm').style.display = 'none';
+                    el('pendingStatus').style.display = 'none';
+                    el('bannedStatus').style.display = 'block';
+                    stopPolling();
+                } else if (data.status === 'approved') {
+                    // Approved = Unlock App!
+                    stopPolling();
+                    el('lockScreen').style.opacity = '0';
+                    setTimeout(() => {
+                        el('lockScreen').style.display = 'none';
+                        el('app').style.display = 'flex';
+                        initApp();
+                    }, 300);
+                }
+            } catch(e) {}
+        }
+
+        function startPolling() {
+            if (authPollInterval) return;
+            authPollInterval = setInterval(checkDeviceStatus, 5000);
+        }
+        function stopPolling() {
+            if (authPollInterval) {
+                clearInterval(authPollInterval);
+                authPollInterval = null;
+            }
+        }
+
+        document.getElementById('requestBtn').addEventListener('click', async () => {
+            const name = document.getElementById('reqName').value.trim();
+            const email = document.getElementById('reqEmail').value.trim();
+            
+            // XSS / Basic Validation
+            if (!name || !email) {
+                el('lockError').innerText = 'Please enter name and email.';
+                el('lockError').style.display = 'block';
+                return;
+            }
+            if (name.length > 50 || email.length > 100 || name.includes('<') || email.includes('<')) {
+                el('lockError').innerText = 'Invalid input format.';
+                el('lockError').style.display = 'block';
+                return;
+            }
+
+            el('requestBtn').innerText = 'Sending...';
+            el('lockError').style.display = 'none';
+
+            const { error } = await supabase.from('devices').insert([{
+                machine_id: currentMachineId,
+                name: name,
+                email: email,
+                status: 'pending'
+            }]);
+
+            if (error) {
+                el('lockError').innerText = 'Failed to request access. Try again.';
+                el('lockError').style.display = 'block';
+                el('requestBtn').innerText = 'Request Access';
+            } else {
+                checkDeviceStatus();
+            }
+        });
