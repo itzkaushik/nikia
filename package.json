@@ -1,6 +1,6 @@
 {
   "name": "nikia",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Nikia — Watch Together Desktop App",
   "main": "main.js",
   "scripts": {
@@ -47,7 +47,15 @@
       "icon": null
     },
     "mac": {
-      "target": "dmg",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
       "icon": null
     }
   },
