@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nikia — Watch Together</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: https: wss: blob:; child-src 'self' https: blob:;">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
@@ -697,9 +698,15 @@
     <div class="room-panel" id="roomPanel">
         <div id="roomNotConnected">
             <h3>Watch Party</h3>
+            <select id="roomLimitSelect" style="width: 100%; padding: 10px; margin-bottom: 8px; border-radius: var(--radius-sm); background: rgba(10, 10, 15, 0.6); border: 1px solid var(--border); color: var(--text-primary); outline: none;">
+                <option value="2">2 Members (Default)</option>
+                <option value="3">3 Members</option>
+                <option value="4">4 Members</option>
+                <option value="5">5 Members (Max)</option>
+            </select>
             <button class="room-btn primary" id="createRoomBtn">Create Room</button>
             <div class="room-divider">— or join an existing room —</div>
-            <input type="text" id="joinRoomInput" placeholder="Enter room code" maxlength="6">
+            <input type="text" id="joinRoomInput" placeholder="Enter room code" maxlength="8">
             <button class="room-btn secondary" id="joinRoomBtn">Join Room</button>
         </div>
         <div id="roomConnected" style="display:none">
@@ -1054,6 +1061,18 @@
                         el('verifyBtn').innerText = 'Verify Access';
                         return;
                     }
+
+                    // Force refresh so the newly issued token has the machine_id inside its payload
+                    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+                    if (!refreshError && refreshData.session) {
+                        currentJwtToken = refreshData.session.access_token;
+                    } else {
+                        await supabase.auth.signOut();
+                        el('lockError').innerText = 'Failed to secure session. Try again.';
+                        el('lockError').style.display = 'block';
+                        el('verifyBtn').innerText = 'Verify Access';
+                        return;
+                    }
                 }
 
                 // Success
@@ -1205,17 +1224,23 @@
         function generateRoomCode() {
             var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
             var code = '';
-            for (var i = 0; i < 6; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+            for (var i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
             return code;
         }
 
         var heartbeatInterval = null;
 
-        function connectToRoom(roomCode) {
+        function connectToRoom(roomCode, isHost = false, maxMembers = null) {
             if (socket) { socket.close(); socket = null; }
             if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
             currentRoomCode = roomCode.toUpperCase();
-            socket = new WebSocket('wss://cine-sync.cine-sync.workers.dev/ws?room=' + currentRoomCode + '&token=' + (currentJwtToken || ''));
+            
+            var wsUrl = 'wss://cine-sync.cine-sync.workers.dev/ws?room=' + currentRoomCode + '&token=' + (currentJwtToken || '') + '&machine=' + (currentMachineId || '');
+            if (isHost && maxMembers) {
+                wsUrl += '&isHost=true&max=' + maxMembers;
+            }
+            
+            socket = new WebSocket(wsUrl);
 
             socket.onopen = function() {
                 el('syncBadge').classList.remove('disconnected');
@@ -1242,22 +1267,29 @@
                     }, 5000);
                 }
             };
-            socket.onclose = function() {
+            socket.onclose = function(e) {
                 if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
                 el('syncBadge').classList.add('disconnected');
                 el('syncBadge').classList.remove('in-room');
-                el('syncLabel').textContent = 'Reconnecting...';
+                el('syncLabel').textContent = 'Disconnected';
+                el('roomConnected').style.display = 'none';
+                el('roomNotConnected').style.display = 'block';
+                socket = null;
+                
+                if (e && e.code === 4001) {
+                    alert('Room is Full! The host has reached the maximum number of members for this room.');
+                    return;
+                }
+                if (e && e.code === 4003) {
+                    alert('Unauthorized: Only the host can create this room.');
+                    return;
+                }
                 
                 // Auto-reconnect if we didn't deliberately disconnect
                 if (currentRoomCode) {
                     setTimeout(function() {
                         if (currentRoomCode) connectToRoom(currentRoomCode);
                     }, 3000);
-                } else {
-                    socket = null;
-                    el('syncLabel').textContent = 'No Room';
-                    el('roomNotConnected').style.display = 'block';
-                    el('roomConnected').style.display = 'none';
                 }
             };
             socket.onmessage = function(event) {
@@ -1393,16 +1425,17 @@
         });
 
         el('createRoomBtn').addEventListener('click', function() {
-            var code = generateRoomCode();
+            var maxLimit = el('roomLimitSelect').value;
             amIHost = true;
-            connectToRoom(code);
+            connectToRoom(generateRoomCode(), true, maxLimit);
         });
         el('joinRoomBtn').addEventListener('click', function() {
             var code = el('joinRoomInput').value.trim();
-            if (code.length >= 4) {
+            if (code.length === 8) {
                 amIHost = false;
-                connectToRoom(code);
-                el('joinRoomInput').value = '';
+                connectToRoom(code, false, null);
+            } else {
+                alert('Room code must be 8 characters');
             }
         });
         el('joinRoomInput').addEventListener('keydown', function(e) {
@@ -1447,7 +1480,10 @@
         // TMDB
         function tmdbFetch(path) {
             return fetch(workerOrigin + '/api/tmdb' + path, {
-                headers: { 'Authorization': 'Bearer ' + (currentJwtToken || '') }
+                headers: { 
+                    'Authorization': 'Bearer ' + (currentJwtToken || ''),
+                    'X-Machine-Id': currentMachineId || ''
+                }
             }).then(function(r) { return r.json(); });
         }
         function posterUrl(path, size) { return path ? TMDB_IMG + (size || 'w342') + path : ''; }
@@ -2131,7 +2167,13 @@
         // Back button / Navigation logic
         function goHomeAndScroll(targetId) {
             watchPage.classList.remove('active');
+            if (el('browsePage')) el('browsePage').classList.remove('active');
             homePage.classList.remove('hidden');
+            
+            // Update nav active state
+            document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+            el('navHome').classList.add('active');
+
             player.pause();
             el('embedFrame').src = 'about:blank';
             el('iframeContainer').classList.remove('visible');
@@ -2236,7 +2278,18 @@
         el('browseGenre').addEventListener('change', function() { browsePage = 1; renderBrowse(); });
         el('browseYear').addEventListener('change', function() { browsePage = 1; renderBrowse(); });
         el('browseSort').addEventListener('change', function() { browsePage = 1; renderBrowse(); });
-        el('loadMoreBtn').addEventListener('click', function() { browsePage++; renderBrowse(); });
+        
+        // Load More (Manual + Infinite Scroll)
+        var loadMoreBtn = el('loadMoreBtn');
+        loadMoreBtn.addEventListener('click', function() { browsePage++; renderBrowse(); });
+        
+        var browseObserver = new IntersectionObserver(function(entries) {
+            if (entries[0].isIntersecting && el('browsePage').classList.contains('active')) {
+                // If it's visible, simulate a click
+                loadMoreBtn.click();
+            }
+        }, { rootMargin: '0px 0px 400px 0px' });
+        browseObserver.observe(loadMoreBtn);
         
         el('navBrowse').addEventListener('click', function(e) {
             e.preventDefault();
@@ -2253,11 +2306,20 @@
             }
         });
         
-        // Setup Movies/TV nav clicks to go to Browse
-        
+        el('navMovies').addEventListener('click', function(e) {
+            e.preventDefault();
+            el('navBrowse').click();
+            document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+            this.classList.add('active');
+            el('browseType').value = 'movie';
+            el('browseType').dispatchEvent(new Event('change'));
+        });
+
         el('navTV').addEventListener('click', function(e) {
             e.preventDefault();
             el('navBrowse').click();
+            document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+            this.classList.add('active');
             el('browseType').value = 'tv';
             el('browseType').dispatchEvent(new Event('change'));
         });
@@ -2266,14 +2328,6 @@
         el('navHome').addEventListener('click', function(e) {
             e.preventDefault();
             goHomeAndScroll(null);
-            document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
-            this.classList.add('active');
-            if (el('browsePage')) el('browsePage').classList.remove('active');
-        });
-        
-        el('navTV').addEventListener('click', function(e) {
-            e.preventDefault();
-            goHomeAndScroll('tvRow');
         });
 
         // playStream() has been removed — the new sync system uses native iframes

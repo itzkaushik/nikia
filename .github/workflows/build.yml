@@ -2,6 +2,9 @@ name: Build Nikia
 
 on:
   workflow_dispatch: # Allows you to run this manually from the Actions tab
+  push:
+    tags:
+      - 'v*' # Triggers when you push a tag like v1.0.3
 
 permissions:
   contents: write

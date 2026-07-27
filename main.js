@@ -20,6 +20,20 @@ autoUpdater.logger = log;
 // Initialize OpenSubtitles API (using a generic user agent)
 const OS = new OpenSubtitles('TemporaryUserAgent');
 
+// Enforce single instance to prevent Chromium cache/localStorage locks
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Someone tried to run a second instance, we should focus our window.
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
+
 let mainWindow = null;
 let torrentClient = null;
 let torrentServer = null;
@@ -406,6 +420,7 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       webSecurity: true,
+      sandbox: true,
       nodeIntegration: false,
       contextIsolation: true,
       autoplayPolicy: 'no-user-gesture-required'

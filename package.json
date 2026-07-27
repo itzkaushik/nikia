@@ -1,6 +1,6 @@
 {
   "name": "nikia",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Nikia — Watch Together Desktop App",
   "main": "main.js",
   "scripts": {
@@ -13,19 +13,29 @@
   "license": "MIT",
   "devDependencies": {
     "cheerio": "^1.2.0",
-    "electron": "^33.0.0",
-    "electron-builder": "^25.0.0",
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3",
     "javascript-obfuscator": "^5.5.0"
+  },
+  "overrides": {
+    "ip": "^2.0.1",
+    "tar": "^6.2.1"
   },
   "repository": "itzkaushik/nikia",
   "build": {
     "appId": "com.nikia.app",
     "productName": "Nikia",
     "npmRebuild": false,
-    "publish": {
-      "provider": "generic",
-      "url": "https://cine-sync.cine-sync.workers.dev/updates"
-    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://cine-sync.cine-sync.workers.dev/updates"
+      },
+      {
+        "provider": "github",
+        "releaseType": "draft"
+      }
+    ],
     "files": [
       "main.js",
       "preload.js",
