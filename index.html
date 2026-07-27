@@ -487,12 +487,60 @@
         /* ============================================ */
         /* MOBILE / ANDROID RESPONSIVE                  */
         /* ============================================ */
+        /* Hamburger Menu (hidden on desktop) */
+        .hamburger-btn { display: none; }
+        .mobile-menu-overlay {
+            display: none; position: fixed; inset: 0; z-index: 9998;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+        }
+        .mobile-menu-overlay.open { display: block; }
+        .mobile-menu {
+            position: fixed; top: 0; right: -280px; z-index: 9999;
+            width: 280px; height: 100vh;
+            background: linear-gradient(180deg, #12121a 0%, #0a0a0f 100%);
+            border-left: 1px solid rgba(255,255,255,0.08);
+            padding: 0; transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: -8px 0 40px rgba(0,0,0,0.5);
+            overflow-y: auto;
+        }
+        .mobile-menu.open { right: 0; }
+        .mobile-menu-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .mobile-menu-title { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+        .mobile-menu-close {
+            width: 32px; height: 32px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.06); font-size: 1.3rem;
+            color: var(--text-secondary); cursor: pointer; transition: all 0.2s;
+        }
+        .mobile-menu-close:hover { background: rgba(255,255,255,0.12); color: white; }
+        .mobile-menu-item {
+            display: flex; align-items: center; gap: 14px;
+            padding: 16px 24px; font-size: 1rem; font-weight: 500;
+            color: var(--text-secondary); transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        .mobile-menu-item:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
+        .mobile-menu-item.active {
+            color: var(--accent); background: rgba(233,30,140,0.06);
+            border-left-color: var(--accent);
+        }
+        .mobile-menu-item svg { flex-shrink: 0; }
+
         @media (max-width: 768px) {
             .navbar { padding: 0 12px; height: 56px; }
             .nav-brand { font-size: 1.2rem; gap: 8px; }
             .nav-brand svg { width: 26px; height: 26px; }
             .nav-links { display: none; }
-            .nav-right { gap: 10px; }
+            .hamburger-btn {
+                display: flex; align-items: center; justify-content: center;
+                width: 36px; height: 36px; border-radius: 50%;
+                background: rgba(255,255,255,0.06); transition: all 0.2s;
+            }
+            .hamburger-btn:hover { background: rgba(255,255,255,0.12); }
+            .nav-right { gap: 8px; }
             .nav-search-btn { width: 36px; height: 36px; }
             .sync-badge { padding: 5px 10px; font-size: 0.7rem; }
             .hero { height: 55vh; min-height: 350px; padding: 0 16px 30px; margin-top: -56px; }
@@ -512,9 +560,9 @@
             .card-meta { font-size: 0.7rem; }
             .movie-card:hover { transform: none; }
             .slider-btn { display: none; }
-            .room-panel { top: auto; bottom: 0; right: 0; left: 0; width: 100%; max-width: 100%; border-radius: 16px 16px 0 0; padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px)); max-height: 80vh; overflow-y: auto; }
+            .room-panel { top: auto; bottom: 0; right: 0; left: 0; width: 100%; max-width: 100%; border-radius: 16px 16px 0 0; padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px)); max-height: 70vh; overflow-y: auto; }
             .room-panel .room-code-display { font-size: 1.3rem; }
-            .search-overlay { padding-top: 20px; }
+            .search-overlay { padding-top: calc(16px + env(safe-area-inset-top, 24px)); }
             .search-modal { padding: 0 12px; }
             .search-input-wrap { height: 48px; padding: 0 14px; }
             .search-results { max-height: 60vh; }
@@ -789,7 +837,36 @@
                 <div class="sync-dot"></div>
                 <span id="syncLabel">No Room</span>
             </div>
+            <button class="hamburger-btn" id="hamburgerBtn" aria-label="Menu">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
         </div>
+    </nav>
+
+    <!-- Mobile Menu Drawer -->
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-header">
+            <span class="mobile-menu-title">Menu</span>
+            <button class="mobile-menu-close" id="mobileMenuClose">&times;</button>
+        </div>
+        <a href="#" class="mobile-menu-item active" id="mobileNavHome">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            Home
+        </a>
+        <a href="#" class="mobile-menu-item" id="mobileNavBrowse">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            Browse
+        </a>
+        <a href="#" class="mobile-menu-item" id="mobileNavMovies">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/><line x1="17" y1="17" x2="22" y2="17"/></svg>
+            Movies
+        </a>
+        <a href="#" class="mobile-menu-item" id="mobileNavTV">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>
+            TV Shows
+        </a>
+    </div>
 
     <!-- Room Panel -->
     <div class="room-panel" id="roomPanel">
@@ -818,7 +895,8 @@
             <button class="room-btn danger" id="leaveRoomBtn">Leave Room</button>
         </div>
     </div>
-    </nav>
+
+
 
     <!-- Search Overlay -->
     <div class="search-overlay" id="searchOverlay">
@@ -2350,6 +2428,53 @@
         // Navbar scroll
         window.addEventListener('scroll', function() {
             navbar.classList.toggle('scrolled', window.scrollY > 20);
+        });
+
+        // ============================
+        // HAMBURGER MENU
+        // ============================
+        var mobileMenu = el('mobileMenu');
+        var mobileOverlay = el('mobileMenuOverlay');
+        function openMobileMenu() {
+            mobileMenu.classList.add('open');
+            mobileOverlay.classList.add('open');
+        }
+        function closeMobileMenu() {
+            mobileMenu.classList.remove('open');
+            mobileOverlay.classList.remove('open');
+        }
+        el('hamburgerBtn').addEventListener('click', openMobileMenu);
+        el('mobileMenuClose').addEventListener('click', closeMobileMenu);
+        mobileOverlay.addEventListener('click', closeMobileMenu);
+
+        // Wire mobile menu items to existing nav handlers
+        el('mobileNavHome').addEventListener('click', function(e) {
+            e.preventDefault();
+            closeMobileMenu();
+            el('navHome').click();
+            document.querySelectorAll('.mobile-menu-item').forEach(function(m) { m.classList.remove('active'); });
+            this.classList.add('active');
+        });
+        el('mobileNavBrowse').addEventListener('click', function(e) {
+            e.preventDefault();
+            closeMobileMenu();
+            el('navBrowse').click();
+            document.querySelectorAll('.mobile-menu-item').forEach(function(m) { m.classList.remove('active'); });
+            this.classList.add('active');
+        });
+        el('mobileNavMovies').addEventListener('click', function(e) {
+            e.preventDefault();
+            closeMobileMenu();
+            el('navMovies').click();
+            document.querySelectorAll('.mobile-menu-item').forEach(function(m) { m.classList.remove('active'); });
+            this.classList.add('active');
+        });
+        el('mobileNavTV').addEventListener('click', function(e) {
+            e.preventDefault();
+            closeMobileMenu();
+            el('navTV').click();
+            document.querySelectorAll('.mobile-menu-item').forEach(function(m) { m.classList.remove('active'); });
+            this.classList.add('active');
         });
     })();
     </script>
