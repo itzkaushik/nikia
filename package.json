@@ -1,19 +1,20 @@
 {
   "name": "nikia",
-  "version": "1.0.21",
+  "version": "1.0.22",
   "description": "Nikia — Watch Together Desktop App",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "build:win": "node obfuscate.js && electron-builder --win -p never && node restore.js",
     "build:mac": "node obfuscate.js && electron-builder --mac -p never && node restore.js",
-    "build:android": "npx esbuild src/android.js --bundle --outfile=android.js --format=iife && node obfuscate.js && node copy_for_android.js && node restore.js && npx cap sync && cd android && ./gradlew assembleRelease",
+    "build:android": "npx esbuild src/android.js --bundle --outfile=android.js --format=iife && node obfuscate.js && node copy_for_android.js && node restore.js && npx capacitor-set-version && npx cap sync && cd android && ./gradlew assembleRelease",
     "build": "node obfuscate.js && electron-builder --win --mac -p never && node restore.js"
   },
   "author": "itzkaushik",
   "license": "MIT",
   "devDependencies": {
     "@capacitor/cli": "^8.4.2",
+    "capacitor-set-version": "^2.2.0",
     "cheerio": "^1.2.0",
     "electron": "^43.2.0",
     "electron-builder": "^26.15.3",
@@ -66,6 +67,7 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.4.2",
+    "@capacitor/app": "^8.1.1",
     "@capacitor/browser": "^8.0.4",
     "@capacitor/core": "^8.4.2",
     "@capacitor/device": "^8.0.3",

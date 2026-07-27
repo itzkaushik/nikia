@@ -1,5 +1,51 @@
 import { Device } from '@capacitor/device';
 import { Browser } from '@capacitor/browser';
+import { App } from '@capacitor/app';
+
+// Handle Android hardware back button
+App.addListener('backButton', ({ canGoBack }) => {
+  // 1. Close mobile menu if open
+  const menuOverlay = document.getElementById('mobileMenuOverlay');
+  if (menuOverlay && menuOverlay.classList.contains('open')) {
+    menuOverlay.click();
+    return;
+  }
+  
+  // 2. Close search modal if open
+  const searchModal = document.getElementById('searchModal');
+  if (searchModal && searchModal.style.display === 'flex') {
+    const closeBtn = document.getElementById('closeSearchBtn');
+    if (closeBtn) closeBtn.click();
+    return;
+  }
+  
+  // 3. Close source selection modal if open
+  const sourceModal = document.getElementById('sourceSelectionModal');
+  if (sourceModal && sourceModal.style.display === 'flex') {
+    const closeBtn = document.getElementById('closeSourceModal');
+    if (closeBtn) closeBtn.click();
+    return;
+  }
+
+  // 4. Navigate back from player
+  const backToDetailsBtn = document.getElementById('backToDetailsBtn');
+  if (backToDetailsBtn && backToDetailsBtn.offsetParent !== null) {
+    backToDetailsBtn.click();
+    return;
+  }
+
+  // 5. Navigate back from details view
+  const backBtn = document.getElementById('backBtn');
+  if (backBtn && backBtn.offsetParent !== null) {
+    backBtn.click();
+    return;
+  }
+
+  // If we are on the main screen and no back is possible, exit app natively
+  if (!canGoBack) {
+    App.exitApp();
+  }
+});
 
 window.nikiaMobile = {
   isMobile: true,

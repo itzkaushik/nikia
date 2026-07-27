@@ -530,7 +530,7 @@
         .mobile-menu-item svg { flex-shrink: 0; }
 
         @media (max-width: 768px) {
-            .navbar { padding: 0 12px; height: 56px; }
+            .navbar { padding: env(safe-area-inset-top, 24px) 12px 0; height: calc(56px + env(safe-area-inset-top, 24px)); }
             .nav-brand { font-size: 1.2rem; gap: 8px; }
             .nav-brand svg { width: 26px; height: 26px; }
             .nav-links { display: none; }
