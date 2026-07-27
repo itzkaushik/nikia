@@ -59,11 +59,11 @@ jobs:
           files: android/app/build/outputs/apk/release/app-release.apk
           draft: true
           
-      - name: Upload Artifacts (Desktop)
-        if: matrix.os != 'ubuntu-latest'
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Nikia-${{ matrix.os }}
           path: |
             dist/*.exe
             dist/*.dmg
+            android/app/build/outputs/apk/**/*.apk
