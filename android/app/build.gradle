@@ -19,9 +19,9 @@ android {
     signingConfigs {
         release {
             storeFile file("release.keystore")
-            storePassword "nikia123"
+            storePassword System.getenv("KEYSTORE_PASSWORD") ?: (project.hasProperty('KEYSTORE_PASSWORD') ? project.property('KEYSTORE_PASSWORD') : "nikia123")
             keyAlias "nikia"
-            keyPassword "nikia123"
+            keyPassword System.getenv("KEY_PASSWORD") ?: (project.hasProperty('KEY_PASSWORD') ? project.property('KEY_PASSWORD') : "nikia123")
         }
     }
     buildTypes {

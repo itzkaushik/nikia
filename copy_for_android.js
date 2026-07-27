@@ -32,6 +32,12 @@ html = html.replace(/<div id="torrentProgressBar"[\s\S]*?<\/div>\s*<\/div>/, '')
 // Replace window.nikia calls with window.nikiaMobile (since preload.js isn't used)
 html = html.replace(/window\.nikia/g, 'window.nikiaMobile');
 
+// Add mobile-specific meta tags
+html = html.replace(
+  '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
+  '<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">\n    <meta name="theme-color" content="#0a0a0f">\n    <meta name="mobile-web-app-capable" content="yes">\n    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">'
+);
+
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 
 // Inject android.js and update checker

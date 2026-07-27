@@ -484,14 +484,96 @@
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
 
-        /* Responsive */
+        /* ============================================ */
+        /* MOBILE / ANDROID RESPONSIVE                  */
+        /* ============================================ */
         @media (max-width: 768px) {
-            .navbar { padding: 0 16px; }
-            .hero { padding: 0 16px 40px; height: 70vh; }
-            .hero-title { font-size: 2rem; }
-            .content-section, .player-container, .server-section, .watch-meta { padding-left: 16px; padding-right: 16px; }
-            .movie-card { width: 140px; }
+            .navbar { padding: 0 12px; height: 56px; }
+            .nav-brand { font-size: 1.2rem; gap: 8px; }
+            .nav-brand svg { width: 26px; height: 26px; }
             .nav-links { display: none; }
+            .nav-right { gap: 10px; }
+            .nav-search-btn { width: 36px; height: 36px; }
+            .sync-badge { padding: 5px 10px; font-size: 0.7rem; }
+            .hero { height: 55vh; min-height: 350px; padding: 0 16px 30px; margin-top: -56px; }
+            .hero-title { font-size: 1.8rem; margin-bottom: 8px; }
+            .hero-meta { font-size: 0.8rem; gap: 8px; margin-bottom: 8px; }
+            .hero-desc { font-size: 0.85rem; -webkit-line-clamp: 2; line-clamp: 2; margin-bottom: 16px; }
+            .hero-actions { gap: 8px; }
+            .btn-play { padding: 10px 20px; font-size: 0.85rem; }
+            .btn-play svg { width: 16px; height: 16px; }
+            .btn-info { padding: 10px 16px; font-size: 0.85rem; }
+            .content-section { padding: 0 12px; margin-bottom: 28px; }
+            .section-title { font-size: 1.1rem; }
+            .section-title::before { width: 3px; height: 18px; }
+            .movie-card { width: 130px; }
+            .card-info { padding: 6px 4px 8px; }
+            .card-title { font-size: 0.78rem; }
+            .card-meta { font-size: 0.7rem; }
+            .movie-card:hover { transform: none; }
+            .slider-btn { display: none; }
+            .room-panel { top: auto; bottom: 0; right: 0; left: 0; width: 100%; max-width: 100%; border-radius: 16px 16px 0 0; padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px)); max-height: 80vh; overflow-y: auto; }
+            .room-panel .room-code-display { font-size: 1.3rem; }
+            .search-overlay { padding-top: 20px; }
+            .search-modal { padding: 0 12px; }
+            .search-input-wrap { height: 48px; padding: 0 14px; }
+            .search-results { max-height: 60vh; }
+            .search-result-poster { width: 40px; height: 60px; }
+            .search-result-item { padding: 10px 12px; }
+            .details-view { padding: 16px; padding-top: 80px; }
+            .details-title { font-size: 1.6rem; }
+            .details-meta { font-size: 0.85rem; flex-wrap: wrap; gap: 8px; }
+            .details-desc { font-size: 0.95rem; }
+            .details-actions { flex-wrap: wrap; gap: 10px; }
+            .actor-card { width: 80px; }
+            .actor-avatar { width: 80px; height: 80px; }
+            .actor-name { font-size: 0.72rem; }
+            .player-container { padding: 0; }
+            .player-wrap { border-radius: 0; border-left: none; border-right: none; }
+            .server-section { padding: 0 12px; margin-top: 20px; }
+            .server-tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 6px; }
+            .server-tab { padding: 7px 14px; font-size: 0.8rem; white-space: nowrap; flex-shrink: 0; }
+            .watch-meta { padding: 0 12px 40px; margin-top: 16px; }
+            .watch-title { font-size: 1.2rem; }
+            .watch-desc { font-size: 0.85rem; }
+            .iframe-container { padding: 0; }
+            .embed-frame { border-radius: 0; border-left: none; border-right: none; }
+            .iframe-notice { margin: 0 12px 12px; font-size: 0.8rem; }
+            .tv-controls { margin-top: 24px; padding: 0 12px; }
+            .season-tabs { gap: 6px; }
+            .season-tab { padding: 6px 14px; font-size: 0.8rem; }
+            .episode-card { flex-direction: column; }
+            .episode-thumb-wrap { width: 100%; min-width: unset; height: 160px; }
+            .browse-page { padding: 80px 12px 24px; }
+            .browse-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+            .filter-bar { gap: 8px; }
+            .filter-select { padding: 8px 12px; font-size: 0.85rem; }
+            .source-modal { width: 95vw; padding: 20px; }
+            .source-option { padding: 12px 14px; gap: 12px; }
+            .torrent-progress-bar { padding: 10px 12px; }
+            .torrent-progress-inner { flex-wrap: wrap; gap: 8px; }
+            .torrent-progress-label { min-width: unset; font-size: 0.75rem; width: 100%; }
+            .torrent-progress-stats { min-width: unset; text-align: left; }
+            .source-drawer { width: 100%; max-width: 100%; }
+            .source-switcher-btn { bottom: 65px; left: 12px; }
+            .lock-box { padding: 28px 20px; }
+            .lock-box h2 { font-size: 1.3rem; }
+            .lock-box input { padding: 12px; font-size: 0.9rem; }
+            .lock-box button { padding: 12px; font-size: 0.9rem; }
+            ::-webkit-scrollbar { display: none; }
+            * { scrollbar-width: none; }
+            .back-btn { padding: 6px 12px; font-size: 0.8rem; }
+        }
+        @media (max-width: 380px) {
+            .hero-title { font-size: 1.5rem; }
+            .hero-actions { flex-direction: column; width: 100%; }
+            .btn-play, .btn-info { width: 100%; justify-content: center; }
+            .movie-card { width: 115px; }
+            .details-title { font-size: 1.3rem; }
+        }
+        @supports (padding: env(safe-area-inset-bottom)) {
+            .navbar { padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
+            .torrent-progress-bar { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
         }
 
         /* Source Selection Modal */
