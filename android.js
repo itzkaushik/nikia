@@ -1,6 +1,10 @@
 (() => {
+  var __create = Object.create;
   var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
   var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __getProtoOf = Object.getPrototypeOf;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
   var __esm = (fn, res, err) => function __init() {
     if (err) throw err[0];
     try {
@@ -9,20 +13,45 @@
       throw err = [e], e;
     }
   };
+  var __commonJS = (cb, mod) => function __require() {
+    try {
+      return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+    } catch (e) {
+      throw mod = 0, e;
+    }
+  };
   var __export = (target, all) => {
     for (var name in all)
       __defProp(target, name, { get: all[name], enumerable: true });
   };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+    // If the importer is in node compatibility mode or this is not an ESM
+    // file that has been converted to a CommonJS file using a Babel-
+    // compatible transform (i.e. "__esModule" has not been set), then set
+    // "default" to the CommonJS "module.exports" for node compatibility.
+    isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+    mod
+  ));
 
-  // node_modules/@capacitor/core/dist/index.js
-  var ExceptionCode, CapacitorException, getPlatformId, createCapacitor, initCapacitorGlobal, Capacitor, registerPlugin, WebPlugin, encode, decode, CapacitorCookiesPluginWeb, CapacitorCookies, readBlobAsBase64, normalizeHttpHeaders, buildUrlParams, buildRequestInit, CapacitorHttpPluginWeb, CapacitorHttp, SystemBarsStyle, SystemBarType, SystemBarsPluginWeb, SystemBars;
-  var init_dist = __esm({
-    "node_modules/@capacitor/core/dist/index.js"() {
-      (function(ExceptionCode2) {
-        ExceptionCode2["Unimplemented"] = "UNIMPLEMENTED";
-        ExceptionCode2["Unavailable"] = "UNAVAILABLE";
-      })(ExceptionCode || (ExceptionCode = {}));
-      CapacitorException = class extends Error {
+  // node_modules/@capacitor/core/dist/index.cjs.js
+  var require_index_cjs = __commonJS({
+    "node_modules/@capacitor/core/dist/index.cjs.js"(exports) {
+      "use strict";
+      Object.defineProperty(exports, "__esModule", { value: true });
+      exports.ExceptionCode = void 0;
+      (function(ExceptionCode) {
+        ExceptionCode["Unimplemented"] = "UNIMPLEMENTED";
+        ExceptionCode["Unavailable"] = "UNAVAILABLE";
+      })(exports.ExceptionCode || (exports.ExceptionCode = {}));
+      var CapacitorException = class extends Error {
         constructor(message, code, data) {
           super(message);
           this.message = message;
@@ -30,7 +59,7 @@
           this.data = data;
         }
       };
-      getPlatformId = (win) => {
+      var getPlatformId = (win) => {
         var _a, _b;
         if (win === null || win === void 0 ? void 0 : win.androidBridge) {
           return "android";
@@ -40,7 +69,7 @@
           return "web";
         }
       };
-      createCapacitor = (win) => {
+      var createCapacitor = (win) => {
         const capCustomPlatform = win.CapacitorCustomPlatform || null;
         const cap = win.Capacitor || {};
         const Plugins = cap.Plugins = cap.Plugins || {};
@@ -64,7 +93,7 @@
         };
         const handleError = (err) => win.console.error(err);
         const registeredPlugins = /* @__PURE__ */ new Map();
-        const registerPlugin2 = (pluginName, jsImplementations = {}) => {
+        const registerPlugin4 = (pluginName, jsImplementations = {}) => {
           const registeredPlugin = registeredPlugins.get(pluginName);
           if (registeredPlugin) {
             console.warn(`Capacitor plugin "${pluginName}" already registered. Cannot register plugins twice.`);
@@ -97,7 +126,7 @@
             } else if (impl) {
               return (_b = impl[prop]) === null || _b === void 0 ? void 0 : _b.bind(impl);
             } else {
-              throw new CapacitorException(`"${pluginName}" plugin is not implemented on ${platform}`, ExceptionCode.Unimplemented);
+              throw new CapacitorException(`"${pluginName}" plugin is not implemented on ${platform}`, exports.ExceptionCode.Unimplemented);
             }
           };
           const createPluginMethodWrapper = (prop) => {
@@ -110,7 +139,7 @@
                   remove = p2 === null || p2 === void 0 ? void 0 : p2.remove;
                   return p2;
                 } else {
-                  throw new CapacitorException(`"${pluginName}.${prop}()" is not implemented on ${platform}`, ExceptionCode.Unimplemented);
+                  throw new CapacitorException(`"${pluginName}.${prop}()" is not implemented on ${platform}`, exports.ExceptionCode.Unimplemented);
                 }
               });
               if (prop === "addListener") {
@@ -176,16 +205,16 @@
         cap.handleError = handleError;
         cap.isNativePlatform = isNativePlatform;
         cap.isPluginAvailable = isPluginAvailable;
-        cap.registerPlugin = registerPlugin2;
+        cap.registerPlugin = registerPlugin4;
         cap.Exception = CapacitorException;
         cap.DEBUG = !!cap.DEBUG;
         cap.isLoggingEnabled = !!cap.isLoggingEnabled;
         return cap;
       };
-      initCapacitorGlobal = (win) => win.Capacitor = createCapacitor(win);
-      Capacitor = /* @__PURE__ */ initCapacitorGlobal(typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : {});
-      registerPlugin = Capacitor.registerPlugin;
-      WebPlugin = class {
+      var initCapacitorGlobal = (win) => win.Capacitor = createCapacitor(win);
+      var Capacitor = /* @__PURE__ */ initCapacitorGlobal(typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : {});
+      var registerPlugin3 = Capacitor.registerPlugin;
+      var WebPlugin3 = class {
         constructor() {
           this.listeners = {};
           this.retainedEventArguments = {};
@@ -247,10 +276,10 @@
           };
         }
         unimplemented(msg = "not implemented") {
-          return new Capacitor.Exception(msg, ExceptionCode.Unimplemented);
+          return new Capacitor.Exception(msg, exports.ExceptionCode.Unimplemented);
         }
         unavailable(msg = "not available") {
-          return new Capacitor.Exception(msg, ExceptionCode.Unavailable);
+          return new Capacitor.Exception(msg, exports.ExceptionCode.Unavailable);
         }
         async removeListener(eventName, listenerFunc) {
           const listeners = this.listeners[eventName];
@@ -285,9 +314,10 @@
           });
         }
       };
-      encode = (str) => encodeURIComponent(str).replace(/%(2[346B]|5E|60|7C)/g, decodeURIComponent).replace(/[()]/g, escape);
-      decode = (str) => str.replace(/(%[\dA-F]{2})+/gi, decodeURIComponent);
-      CapacitorCookiesPluginWeb = class extends WebPlugin {
+      var WebView = /* @__PURE__ */ registerPlugin3("WebView");
+      var encode = (str) => encodeURIComponent(str).replace(/%(2[346B]|5E|60|7C)/g, decodeURIComponent).replace(/[()]/g, escape);
+      var decode = (str) => str.replace(/(%[\dA-F]{2})+/gi, decodeURIComponent);
+      var CapacitorCookiesPluginWeb = class extends WebPlugin3 {
         async getCookies() {
           const cookies = document.cookie;
           const cookieMap = {};
@@ -338,10 +368,10 @@
           }
         }
       };
-      CapacitorCookies = registerPlugin("CapacitorCookies", {
+      var CapacitorCookies = registerPlugin3("CapacitorCookies", {
         web: () => new CapacitorCookiesPluginWeb()
       });
-      readBlobAsBase64 = async (blob) => new Promise((resolve, reject) => {
+      var readBlobAsBase64 = async (blob) => new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
           const base64String = reader.result;
@@ -350,7 +380,7 @@
         reader.onerror = (error) => reject(error);
         reader.readAsDataURL(blob);
       });
-      normalizeHttpHeaders = (headers = {}) => {
+      var normalizeHttpHeaders = (headers = {}) => {
         const originalKeys = Object.keys(headers);
         const loweredKeys = Object.keys(headers).map((k) => k.toLocaleLowerCase());
         const normalized = loweredKeys.reduce((acc, key, index) => {
@@ -359,7 +389,7 @@
         }, {});
         return normalized;
       };
-      buildUrlParams = (params, shouldEncode = true) => {
+      var buildUrlParams = (params, shouldEncode = true) => {
         if (!params)
           return null;
         const output = Object.entries(params).reduce((accumulator, entry) => {
@@ -381,7 +411,7 @@
         }, "");
         return output.substr(1);
       };
-      buildRequestInit = (options, extra = {}) => {
+      var buildRequestInit = (options, extra = {}) => {
         const output = Object.assign({ method: options.method || "GET", headers: options.headers }, extra);
         const headers = normalizeHttpHeaders(options.headers);
         const type = headers["content-type"] || "";
@@ -413,7 +443,7 @@
         }
         return output;
       };
-      CapacitorHttpPluginWeb = class extends WebPlugin {
+      var CapacitorHttpPluginWeb = class extends WebPlugin3 {
         /**
          * Perform an Http request given a set of options
          * @param options Options to build the HTTP request
@@ -491,19 +521,21 @@
           return this.request(Object.assign(Object.assign({}, options), { method: "DELETE" }));
         }
       };
-      CapacitorHttp = registerPlugin("CapacitorHttp", {
+      var CapacitorHttp = registerPlugin3("CapacitorHttp", {
         web: () => new CapacitorHttpPluginWeb()
       });
-      (function(SystemBarsStyle2) {
-        SystemBarsStyle2["Dark"] = "DARK";
-        SystemBarsStyle2["Light"] = "LIGHT";
-        SystemBarsStyle2["Default"] = "DEFAULT";
-      })(SystemBarsStyle || (SystemBarsStyle = {}));
-      (function(SystemBarType2) {
-        SystemBarType2["StatusBar"] = "StatusBar";
-        SystemBarType2["NavigationBar"] = "NavigationBar";
-      })(SystemBarType || (SystemBarType = {}));
-      SystemBarsPluginWeb = class extends WebPlugin {
+      exports.SystemBarsStyle = void 0;
+      (function(SystemBarsStyle) {
+        SystemBarsStyle["Dark"] = "DARK";
+        SystemBarsStyle["Light"] = "LIGHT";
+        SystemBarsStyle["Default"] = "DEFAULT";
+      })(exports.SystemBarsStyle || (exports.SystemBarsStyle = {}));
+      exports.SystemBarType = void 0;
+      (function(SystemBarType) {
+        SystemBarType["StatusBar"] = "StatusBar";
+        SystemBarType["NavigationBar"] = "NavigationBar";
+      })(exports.SystemBarType || (exports.SystemBarType = {}));
+      var SystemBarsPluginWeb = class extends WebPlugin3 {
         async setStyle() {
           this.unavailable("not available for web");
         }
@@ -517,9 +549,18 @@
           this.unavailable("not available for web");
         }
       };
-      SystemBars = registerPlugin("SystemBars", {
+      var SystemBars = registerPlugin3("SystemBars", {
         web: () => new SystemBarsPluginWeb()
       });
+      exports.Capacitor = Capacitor;
+      exports.CapacitorCookies = CapacitorCookies;
+      exports.CapacitorException = CapacitorException;
+      exports.CapacitorHttp = CapacitorHttp;
+      exports.SystemBars = SystemBars;
+      exports.WebPlugin = WebPlugin3;
+      exports.WebView = WebView;
+      exports.buildRequestInit = buildRequestInit;
+      exports.registerPlugin = registerPlugin3;
     }
   });
 
@@ -528,11 +569,11 @@
   __export(web_exports, {
     DeviceWeb: () => DeviceWeb
   });
-  var DeviceWeb;
+  var import_core, DeviceWeb;
   var init_web = __esm({
     "node_modules/@capacitor/device/dist/esm/web.js"() {
-      init_dist();
-      DeviceWeb = class extends WebPlugin {
+      import_core = __toESM(require_index_cjs());
+      DeviceWeb = class extends import_core.WebPlugin {
         async getId() {
           return {
             identifier: this.getUid()
@@ -682,11 +723,11 @@
     Browser: () => Browser,
     BrowserWeb: () => BrowserWeb
   });
-  var BrowserWeb, Browser;
+  var import_core3, BrowserWeb, Browser;
   var init_web2 = __esm({
     "node_modules/@capacitor/browser/dist/esm/web.js"() {
-      init_dist();
-      BrowserWeb = class extends WebPlugin {
+      import_core3 = __toESM(require_index_cjs());
+      BrowserWeb = class extends import_core3.WebPlugin {
         constructor() {
           super();
           this._lastWindow = null;
@@ -711,14 +752,14 @@
   });
 
   // node_modules/@capacitor/device/dist/esm/index.js
-  init_dist();
-  var Device = registerPlugin("Device", {
+  var import_core2 = __toESM(require_index_cjs());
+  var Device = (0, import_core2.registerPlugin)("Device", {
     web: () => Promise.resolve().then(() => (init_web(), web_exports)).then((m) => new m.DeviceWeb())
   });
 
   // node_modules/@capacitor/browser/dist/esm/index.js
-  init_dist();
-  var Browser2 = registerPlugin("Browser", {
+  var import_core4 = __toESM(require_index_cjs());
+  var Browser2 = (0, import_core4.registerPlugin)("Browser", {
     web: () => Promise.resolve().then(() => (init_web2(), web_exports2)).then((m) => new m.BrowserWeb())
   });
 
@@ -739,18 +780,32 @@
         const latest = await res.json();
         if (latest && latest.tag_name && latest.tag_name !== "v" + currentVersion && latest.tag_name !== currentVersion) {
           if (latest.apk_url) {
+            const apkName = latest.apk_url.split("/").pop();
+            const proxyUrl = "https://cine-sync.cine-sync.workers.dev/updates/" + encodeURIComponent(apkName);
             const overlay = document.createElement("div");
             overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:Inter,sans-serif;";
             overlay.innerHTML = `
             <div style="background:#1a1a2e;padding:30px;border-radius:16px;text-align:center;max-width:90%;border:1px solid rgba(255,255,255,0.1);">
               <h2 style="margin-bottom:15px;color:#e91e8c;">Update Available!</h2>
               <p style="margin-bottom:20px;color:#a0a0b8;line-height:1.5;">A new version of Nikia (${latest.tag_name}) is available.</p>
-              <button id="downloadApkBtn" style="background:#e91e8c;color:white;border:none;padding:12px 24px;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer;width:100%;">Download APK</button>
+              <button id="downloadApkBtn" style="background:#e91e8c;color:white;border:none;padding:14px 24px;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer;width:100%;">Install Update</button>
             </div>
           `;
             document.body.appendChild(overlay);
-            document.getElementById("downloadApkBtn").addEventListener("click", async () => {
-              await Browser2.open({ url: latest.apk_url });
+            document.getElementById("downloadApkBtn").addEventListener("click", async (e) => {
+              const btn = e.target;
+              btn.innerText = "Downloading...";
+              btn.style.opacity = "0.7";
+              btn.style.pointerEvents = "none";
+              try {
+                const { registerPlugin: registerPlugin3 } = require_index_cjs();
+                const ApkInstaller = registerPlugin3("ApkInstaller");
+                await ApkInstaller.downloadAndInstall({ url: proxyUrl, filename: apkName });
+                btn.innerText = "Installing...";
+              } catch (err) {
+                console.error("Native installer failed, falling back to browser", err);
+                window.open(proxyUrl, "_system");
+              }
             });
           }
         }
@@ -762,6 +817,6 @@
 })();
 /*! Bundled license information:
 
-@capacitor/core/dist/index.js:
+@capacitor/core/dist/index.cjs.js:
   (*! Capacitor: https://capacitorjs.com/ - MIT License *)
 */

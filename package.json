@@ -1,13 +1,13 @@
 {
   "name": "nikia",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "description": "Nikia — Watch Together Desktop App",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "build:win": "node obfuscate.js && electron-builder --win -p never && node restore.js",
     "build:mac": "node obfuscate.js && electron-builder --mac -p never && node restore.js",
-    "build:android": "npx esbuild src/android.js --bundle --outfile=android.js --format=iife && node obfuscate.js && node copy_for_android.js && node restore.js && npx cap sync && cd android && ./gradlew assembleRelease",
+    "build:android": "npx esbuild src/android.js --bundle --outfile=android.js --format=iife && node obfuscate.js && node copy_for_android.js && node restore.js && npx cap sync && cd android && set JAVA_HOME=C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.11.10-hotspot&& gradlew assembleRelease",
     "build": "node obfuscate.js && electron-builder --win --mac -p never && node restore.js"
   },
   "author": "itzkaushik",
@@ -36,7 +36,7 @@
       },
       {
         "provider": "github",
-        "releaseType": "draft"
+        "releaseType": "release"
       }
     ],
     "files": [
