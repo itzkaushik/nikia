@@ -988,6 +988,83 @@
         var searchTimeout = null;
 
         var el = function(id) { return document.getElementById(id); };
+
+        // ============================
+        // VIDEO.JS PLAYER INITIALIZATION
+        // ============================
+        var Button = videojs.getComponent('Button');
+        class SkipBackBtn extends Button {
+            constructor(player, options) {
+                super(player, options);
+                this.controlText('Skip Back 10s');
+                this.el().innerHTML = '<svg fill="currentColor" viewBox="0 0 24 24" width="20" height="20" style="margin-top:5px"><path d="M12.5 3C17.15 3 21 6.85 21 11.5s-3.85 8.5-8.5 8.5-8.5-3.85-8.5-8.5h-2c0 5.8 4.7 10.5 10.5 10.5S23 17.3 23 11.5 18.3 1 12.5 1 4 4.14 4 8H1l4 4 4-4H6c0-3.59 2.91-6.5 6.5-6.5z"/></svg>';
+            }
+            handleClick() { player.currentTime(Math.max(0, player.currentTime() - 10)); }
+        }
+        class SkipForwardBtn extends Button {
+            constructor(player, options) {
+                super(player, options);
+                this.controlText('Skip Forward 10s');
+                this.el().innerHTML = '<svg fill="currentColor" viewBox="0 0 24 24" width="20" height="20" style="margin-top:5px"><path d="M11.5 3C6.85 3 3 6.85 3 11.5s3.85 8.5 8.5 8.5 8.5-3.85 8.5-8.5h2c0 5.8-4.7 10.5-10.5 10.5S1 17.3 1 11.5 5.7 1 11.5 1 20 4.14 20 8h3l-4 4-4-4h3c0-3.59-2.91-6.5-6.5-6.5z"/></svg>';
+            }
+            handleClick() { player.currentTime(player.currentTime() + 10); }
+        }
+        videojs.registerComponent('SkipBackBtn', SkipBackBtn);
+        videojs.registerComponent('SkipForwardBtn', SkipForwardBtn);
+
+        var player = videojs('my-video', {
+            playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
+            controlBar: {
+                children: [
+                    'playToggle',
+                    'SkipBackBtn',
+                    'SkipForwardBtn',
+                    'volumePanel',
+                    'currentTimeDisplay',
+                    'timeDivider',
+                    'durationDisplay',
+                    'progressControl',
+                    'liveDisplay',
+                    'seekToLive',
+                    'remainingTimeDisplay',
+                    'customControlSpacer',
+                    'playbackRateMenuButton',
+                    'chaptersButton',
+                    'descriptionsButton',
+                    'subsCapsButton',
+                    'audioTrackButton',
+                    'pictureInPictureToggle',
+                    'fullscreenToggle'
+                ]
+            }
+        });
+
+        // Subtitle Drag & Drop
+        var playerWrap = document.querySelector('.player-wrap');
+        if (playerWrap) {
+            playerWrap.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                playerWrap.style.boxShadow = 'inset 0 0 50px rgba(233, 30, 140, 0.8)';
+            });
+            playerWrap.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                playerWrap.style.boxShadow = 'none';
+            });
+            playerWrap.addEventListener('drop', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                playerWrap.style.boxShadow = 'none';
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    var file = e.dataTransfer.files[0];
+                    if (file.name.endsWith('.srt') || file.name.endsWith('.vtt')) {
+                        var url = URL.createObjectURL(file);
+                        player.addRemoteTextTrack({ src: url, kind: 'subtitles', label: file.name, default: true }, false);
+                    }
+                }
+            });
+        }
         
         // ============================================
         // AUTHENTICATION & HARDWARE BINDING
@@ -1037,8 +1114,7 @@
                     el('lockScreen').style.opacity = '0';
                     setTimeout(() => {
                         el('lockScreen').style.display = 'none';
-                        el('app').style.display = 'flex';
-                        initApp();
+                        loadHomepage();
                     }, 300);
                 }
             } catch(e) {

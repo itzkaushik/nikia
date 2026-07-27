@@ -76,8 +76,7 @@ const newAuthHtml = `let authPollInterval = null;
                     el('lockScreen').style.opacity = '0';
                     setTimeout(() => {
                         el('lockScreen').style.display = 'none';
-                        el('app').style.display = 'flex';
-                        initApp();
+                        loadHomepage();
                     }, 300);
                 }
             } catch(e) {
