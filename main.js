@@ -596,6 +596,14 @@ app.whenReady().then(() => {
     callback({ cancel: false });
   });
 
+  session.defaultSession.webRequest.onBeforeSendHeaders({ urls: ['*://*/*'] }, (details, callback) => {
+    if (details.url.includes('strmd.st') || details.url.includes('streamed.pk') || details.url.includes('.m3u8') || details.url.includes('.ts')) {
+      details.requestHeaders['Referer'] = 'https://streamed.pk/';
+      details.requestHeaders['Origin'] = 'https://streamed.pk';
+    }
+    callback({ cancel: false, requestHeaders: details.requestHeaders });
+  });
+
   createWindow();
 
   // Unsigned/ad-hoc-signed macOS app bundles cannot reliably replace
