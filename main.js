@@ -218,6 +218,9 @@ ipcMain.on('torrent-start', async (event, magnetURI) => {
         return;
       }
 
+      // Deselect all files first to save disk space (crucial for season packs!)
+      torrent.deselect(0, torrent.pieces.length - 1, false);
+      
       // Prioritize sequential download for streaming
       videoFile.select();
 
@@ -252,9 +255,27 @@ ipcMain.on('torrent-start', async (event, magnetURI) => {
       });
     }, 1000);
 
+    torrentClient.on('error', (err) => {
+      console.error('Nikia Torrent Client Error:', err);
+      if (err.message && err.message.includes('ENOSPC')) {
+        mainWindow?.webContents.send('torrent-error', { 
+          message: 'Not enough disk space to stream this movie. Please free up space on your C: drive.' 
+        });
+      } else {
+        mainWindow?.webContents.send('torrent-error', { message: err.message || 'Stream connection failed' });
+      }
+    });
+
     currentTorrent.on('error', (err) => {
-      console.error('Nikia Torrent error:', err.message);
-      mainWindow?.webContents.send('torrent-error', { message: err.message });
+      console.error('Nikia Torrent Error:', err);
+      clearInterval(progressInterval);
+      if (err.message && err.message.includes('ENOSPC')) {
+        mainWindow?.webContents.send('torrent-error', { 
+          message: 'Not enough disk space to stream this movie. Please free up space on your C: drive.' 
+        });
+      } else {
+        mainWindow?.webContents.send('torrent-error', { message: 'Failed to load stream. No peers available or network error.' });
+      }
     });
 
   } catch (e) {
@@ -538,8 +559,23 @@ function createWindow() {
 // STRIP IFRAME SECURITY HEADERS
 // ============================================================================
 app.whenReady().then(() => {
+  try {
+    app.configureHostResolver({
+      enableBuiltInResolver: true,
+      secureDnsMode: 'secure',
+      secureDnsServers: ['https://chrome.cloudflare-dns.com/dns-query', 'https://dns.google/dns-query']
+    });
+  } catch (e) {
+    console.error('Nikia: Failed to configure host resolver:', e);
+  }
+
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     const headers = { ...details.responseHeaders };
+    
+    // Log m3u8 requests for debugging
+    if (details.url.includes('.m3u8')) {
+      console.log('Nikia: Found m3u8 response:', details.url, 'Status:', details.statusCode);
+    }
 
     const keysToRemove = Object.keys(headers).filter(key => {
       const lower = key.toLowerCase();
@@ -551,6 +587,13 @@ app.whenReady().then(() => {
     keysToRemove.forEach(key => delete headers[key]);
 
     callback({ cancel: false, responseHeaders: headers });
+  });
+
+  session.defaultSession.webRequest.onBeforeRequest({ urls: ['*://*/*'] }, (details, callback) => {
+    if (details.url.includes('.m3u8')) {
+      console.log('Nikia: Attempting to load manifest:', details.url);
+    }
+    callback({ cancel: false });
   });
 
   createWindow();
