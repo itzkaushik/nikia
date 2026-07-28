@@ -597,16 +597,10 @@ app.whenReady().then(() => {
   });
 
   session.defaultSession.webRequest.onBeforeSendHeaders({ urls: ['*://*/*'] }, (details, callback) => {
-    if (details.url.includes('strmd.st') || details.url.includes('streamed.pk') || details.url.includes('.m3u8') || details.url.includes('.ts')) {
-      if (details.url.includes('strmd.st')) {
-        details.requestHeaders['Referer'] = 'https://strmd.st/';
-        details.requestHeaders['Origin'] = 'https://strmd.st';
-      } else if (details.url.includes('streamed.pk')) {
-        details.requestHeaders['Referer'] = 'https://streamed.pk/';
-        details.requestHeaders['Origin'] = 'https://streamed.pk';
-      }
-      details.requestHeaders['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-    }
+    // ALWAYS spoof user agent globally to prevent token mismatch between iframe HTML and m3u8 requests
+    // (This fixes the 404/403 errors on strict CDNs like strmd.st)
+    details.requestHeaders['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
     callback({ cancel: false, requestHeaders: details.requestHeaders });
   });
 
