@@ -828,6 +828,7 @@
             <a href="#" id="navBrowse">Browse</a>
             <a href="#" id="navMovies">Movies</a>
             <a href="#" id="navTV">TV Shows</a>
+            <a href="#" id="navLiveSports">Live Sports</a>
         </div>
         <div class="nav-right">
             <button class="nav-search-btn" id="openSearchBtn" aria-label="Search">
@@ -865,6 +866,10 @@
         <a href="#" class="mobile-menu-item" id="mobileNavTV">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>
             TV Shows
+        </a>
+        <a href="#" class="mobile-menu-item" id="mobileNavLiveSports">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+            Live Sports
         </a>
     </div>
 
@@ -1008,6 +1013,19 @@
         </div>
         <div class="browse-grid" id="browseGrid"></div>
         <button class="load-more-btn" id="loadMoreBtn">Load More</button>
+    </div>
+
+    <!-- Sports Page -->
+    <div class="sports-page" id="sportsPage" style="display:none; padding: 100px 20px 40px;">
+        <div style="text-align: center; margin-bottom: 40px;">
+            <h1 style="font-size: 2rem; font-weight: 800; margin-bottom: 10px;">Live Sports</h1>
+            <p style="color: var(--text-secondary);">Watch Football and UFC live</p>
+        </div>
+        <div style="display: flex; gap: 20px; justify-content: center; max-width: 800px; margin: 0 auto 40px;">
+            <button class="room-btn primary" id="btnFootball" style="font-size: 1.2rem; padding: 20px;">⚽ Football</button>
+            <button class="room-btn secondary" id="btnUFC" style="font-size: 1.2rem; padding: 20px; background: rgba(233,30,140,0.1); border-color: rgba(233,30,140,0.3); color: var(--accent);">🥊 UFC</button>
+        </div>
+        <div id="sportsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto;"></div>
     </div>
 
     <!-- Watch Page -->
@@ -1337,7 +1355,11 @@
         // ============================
         var socket = null;
         var currentRoomCode = null;
-        var lastSyncTime = 0;
+        var currentRoomMaxMembers = null;
+        var suppressLocalEventsUntil = 0;
+        var hostPausedForBuffer = false;
+        var hostWasPlayingBeforeBuffer = false;
+        var pendingIframeStateAction = null;
 
         function generateRoomCode() {
             var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -1346,16 +1368,15 @@
             return code;
         }
 
-        var heartbeatInterval = null;
-
         function connectToRoom(roomCode, isHost = false, maxMembers = null) {
             if (socket) { socket.close(); socket = null; }
-            if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
             currentRoomCode = roomCode.toUpperCase();
+            if (isHost && maxMembers) currentRoomMaxMembers = maxMembers;
             
             var wsUrl = 'wss://cine-sync.cine-sync.workers.dev/ws?room=' + currentRoomCode + '&token=' + (currentJwtToken || '') + '&machine=' + (currentMachineId || '');
-            if (isHost && maxMembers) {
-                wsUrl += '&isHost=true&max=' + maxMembers;
+            if (isHost) {
+                wsUrl += '&isHost=true';
+                if (currentRoomMaxMembers) wsUrl += '&max=' + currentRoomMaxMembers;
             }
             
             socket = new WebSocket(wsUrl);
@@ -1368,23 +1389,8 @@
                 el('roomConnected').style.display = 'block';
                 el('roomCodeDisplay').textContent = currentRoomCode;
 
-                if (amIHost) {
-                    heartbeatInterval = setInterval(function() {
-                        if (socket && socket.readyState === WebSocket.OPEN) {
-                            var t = 0;
-                            if (currentPlayMode === 'torrent' && player) {
-                                t = player.currentTime();
-                            } else if (el('embedFrame').contentWindow) {
-                                el('embedFrame').contentWindow.postMessage({ type: 'Nikia_SYNC_COMMAND', action: 'heartbeat_req' }, '*');
-                                return; 
-                            }
-                            wsSend({ type: 'sync_heartbeat', currentTime: t });
-                        }
-                    }, 5000);
-                }
             };
             socket.onclose = function(e) {
-                if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
                 el('syncBadge').classList.add('disconnected');
                 el('syncBadge').classList.remove('in-room');
                 el('syncLabel').textContent = 'Disconnected';
@@ -1403,7 +1409,7 @@
                 
                 if (currentRoomCode) {
                     setTimeout(function() {
-                        if (currentRoomCode) connectToRoom(currentRoomCode);
+                        if (currentRoomCode) connectToRoom(currentRoomCode, amIHost, currentRoomMaxMembers);
                     }, 3000);
                 }
             };
@@ -1446,44 +1452,42 @@
                     return;
                 }
 
-                if (data.type === 'play' || data.type === 'pause' || data.type === 'seek' || data.type === 'sync_heartbeat') {
-                    if (data.type === 'sync_heartbeat') {
-                        if (amIHost) return; 
-                        var currentT = 0;
-                        if (currentPlayMode === 'torrent' && player) {
-                            currentT = player.currentTime();
-                        } else if (window.__lastKnownIframeTime) {
-                            currentT = window.__lastKnownIframeTime;
-                        } else {
-                            data.type = 'seek';
-                        }
-                        
-                        if (data.type === 'sync_heartbeat' && Math.abs(currentT - data.currentTime) < 2) {
-                            return;
-                        } else if (data.type === 'sync_heartbeat') {
-                            data.type = 'seek';
-                        }
-                    }
+                if (data.type === 'sync_request_state') {
+                    if (amIHost) requestHostState('sync_request');
+                    return;
+                }
 
-                    lastSyncTime = Date.now();
-                    
+                if (data.type === 'buffer_warning') {
+                    if (amIHost) pauseRoomForBuffer();
+                    return;
+                }
+
+                if (data.type === 'buffer_resolved') {
+                    if (amIHost) resumeRoomAfterBuffer();
+                    return;
+                }
+
+                if (data.type === 'play' || data.type === 'pause' || data.type === 'seek') {
+                    // A host is authoritative and never follows a client.
+                    if (amIHost) return;
+
+                    var targetTime = data.currentTime;
+                    if (data.type === 'play' && typeof targetTime === 'number' && data.sentAt) {
+                        targetTime += Math.max(0, (Date.now() - data.sentAt) / 1000);
+                    }
+                    suppressLocalEventsUntil = Date.now() + 1000;
+
                     if (currentPlayMode === 'torrent') {
-                        if (data.type === 'play') {
-                            player.currentTime(data.currentTime);
-                            player.play();
-                        } else if (data.type === 'pause') {
-                            player.currentTime(data.currentTime);
-                            player.pause();
-                        } else if (data.type === 'seek') {
-                            player.currentTime(data.currentTime);
-                        }
+                        if (typeof targetTime === 'number') player.currentTime(targetTime);
+                        if (data.type === 'play') player.play();
+                        else if (data.type === 'pause') player.pause();
                     } else {
                         var iframe = el('embedFrame');
                         if (iframe && iframe.contentWindow) {
                             iframe.contentWindow.postMessage({
                                 type: 'Nikia_SYNC_COMMAND',
                                 action: data.type,
-                                currentTime: data.currentTime
+                                currentTime: targetTime
                             }, '*');
                         }
                     }
@@ -1495,6 +1499,8 @@
         function disconnectRoom() {
             if (socket) { socket.close(); socket = null; }
             currentRoomCode = null;
+            currentRoomMaxMembers = null;
+            amIHost = false;
             el('syncBadge').classList.add('disconnected');
             el('syncBadge').classList.remove('in-room');
             el('syncLabel').textContent = 'No Room';
@@ -1505,6 +1511,64 @@
         function wsSend(data) {
             if (socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify(data));
+            }
+        }
+
+        function publishHostControl(action, currentTime, reason) {
+            if (!amIHost) return;
+            wsSend({
+                type: action,
+                currentTime: currentTime,
+                sentAt: Date.now(),
+                reason: reason || null
+            });
+        }
+
+        function requestHostState(action) {
+            if (!amIHost) return;
+            if (currentPlayMode === 'torrent' && player) {
+                var torrentAction = player.paused() ? 'pause' : 'play';
+                if (action === 'buffer_pause') torrentAction = 'pause';
+                if (action === 'buffer_resume') torrentAction = 'play';
+                publishHostControl(torrentAction, player.currentTime(), action);
+                return;
+            }
+
+            pendingIframeStateAction = action;
+            var iframe = el('embedFrame');
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage({ type: 'Nikia_SYNC_COMMAND', action: 'state_req' }, '*');
+            }
+        }
+
+        function pauseRoomForBuffer() {
+            if (!amIHost || hostPausedForBuffer) return;
+            hostPausedForBuffer = true;
+            hostWasPlayingBeforeBuffer = currentPlayMode === 'torrent' ? !player.paused() : true;
+            if (!hostWasPlayingBeforeBuffer) return;
+
+            suppressLocalEventsUntil = Date.now() + 1000;
+            if (currentPlayMode === 'torrent') {
+                var t = player.currentTime();
+                player.pause();
+                publishHostControl('pause', t, 'buffer_pause');
+            } else {
+                requestHostState('buffer_pause');
+            }
+        }
+
+        function resumeRoomAfterBuffer() {
+            if (!amIHost || !hostPausedForBuffer) return;
+            hostPausedForBuffer = false;
+            if (!hostWasPlayingBeforeBuffer) return;
+
+            suppressLocalEventsUntil = Date.now() + 1000;
+            if (currentPlayMode === 'torrent') {
+                var t = player.currentTime();
+                player.play();
+                publishHostControl('play', t, 'buffer_resume');
+            } else {
+                requestHostState('buffer_resume');
             }
         }
 
@@ -1558,17 +1622,48 @@
                     window.__lastKnownIframeTime = event.data.currentTime;
                 }
                 
-                if (event.data.event === 'heartbeat') {
-                    // This is the response to heartbeat_req
-                    wsSend({ type: 'sync_heartbeat', currentTime: event.data.currentTime });
+                if (event.data.event === 'state') {
+                    if (!amIHost || !pendingIframeStateAction) return;
+                    var stateAction = pendingIframeStateAction;
+                    pendingIframeStateAction = null;
+                    var targetAction = event.data.paused ? 'pause' : 'play';
+                    if (stateAction === 'buffer_pause') targetAction = 'pause';
+                    if (stateAction === 'buffer_resume') targetAction = 'play';
+
+                    var iframe = el('embedFrame');
+                    if (iframe && iframe.contentWindow && stateAction !== 'sync_request') {
+                        iframe.contentWindow.postMessage({
+                            type: 'Nikia_SYNC_COMMAND',
+                            action: targetAction,
+                            currentTime: event.data.currentTime
+                        }, '*');
+                    }
+                    publishHostControl(targetAction, event.data.currentTime, stateAction);
                     return;
                 }
                 
-                // For play/pause/seek, just forward. The smart iframe bridge handles echo prevention.
-                // We keep a 100ms debounce just to prevent absolute spam if the user scrubs rapidly
-                if (Date.now() - lastSyncTime < 100) return;
+                if (event.data.event === 'buffer_warning') {
+                    if (amIHost) pauseRoomForBuffer();
+                    else wsSend({ type: 'buffer_warning' });
+                    return;
+                }
+
+                if (event.data.event === 'buffer_resolved') {
+                    if (amIHost) resumeRoomAfterBuffer();
+                    else wsSend({ type: 'buffer_resolved' });
+                    return;
+                }
+
+                if (event.data.event !== 'play' && event.data.event !== 'pause' && event.data.event !== 'seek') return;
+                if (!amIHost) {
+                    // Followers cannot change the room. Ask the host to resend its
+                    // state so a local interaction is promptly corrected.
+                    wsSend({ type: 'sync_request_state' });
+                    return;
+                }
+                if (Date.now() < suppressLocalEventsUntil) return;
                 console.log('Iframe event:', event.data.event, 'at', event.data.currentTime);
-                wsSend({ type: event.data.event, currentTime: event.data.currentTime });
+                publishHostControl(event.data.event, event.data.currentTime, 'host_input');
             }
         });
 
@@ -2113,18 +2208,30 @@
         // ============================
         player.on('play', function() {
             if (currentPlayMode !== 'torrent') return;
-            if (Date.now() - lastSyncTime < 500) return;
-            wsSend({ type: 'play', currentTime: player.currentTime() });
+            if (!amIHost) {
+                wsSend({ type: 'sync_request_state' });
+                return;
+            }
+            if (Date.now() < suppressLocalEventsUntil) return;
+            publishHostControl('play', player.currentTime(), 'host_input');
         });
         player.on('pause', function() {
             if (currentPlayMode !== 'torrent') return;
-            if (Date.now() - lastSyncTime < 500) return;
-            wsSend({ type: 'pause', currentTime: player.currentTime() });
+            if (!amIHost) {
+                wsSend({ type: 'sync_request_state' });
+                return;
+            }
+            if (Date.now() < suppressLocalEventsUntil) return;
+            publishHostControl('pause', player.currentTime(), 'host_input');
         });
         player.on('seeked', function() {
             if (currentPlayMode !== 'torrent') return;
-            if (Date.now() - lastSyncTime < 500) return;
-            wsSend({ type: 'seek', currentTime: player.currentTime() });
+            if (!amIHost) {
+                wsSend({ type: 'sync_request_state' });
+                return;
+            }
+            if (Date.now() < suppressLocalEventsUntil) return;
+            publishHostControl('seek', player.currentTime(), 'host_input');
         });
 
         el('backToDetailsBtn').addEventListener('click', function() {
@@ -2388,6 +2495,7 @@
             homePage.classList.add('hidden');
             watchPage.classList.remove('active');
             el('browsePage').classList.add('active');
+            el('sportsPage').style.display = 'none';
             document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
             this.classList.add('active');
             window.scrollTo(0, 0);
@@ -2419,6 +2527,7 @@
         // Navbar Links
         el('navHome').addEventListener('click', function(e) {
             e.preventDefault();
+            el('sportsPage').style.display = 'none';
             goHomeAndScroll(null);
         });
 
@@ -2476,8 +2585,35 @@
             document.querySelectorAll('.mobile-menu-item').forEach(function(m) { m.classList.remove('active'); });
             this.classList.add('active');
         });
+        
+        el('navLiveSports').addEventListener('click', function(e) {
+            e.preventDefault();
+            homePage.classList.add('hidden');
+            watchPage.classList.remove('active');
+            el('browsePage').classList.remove('active');
+            el('sportsPage').style.display = 'block';
+            document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+            this.classList.add('active');
+            window.scrollTo(0,0);
+        });
+
+        el('mobileNavLiveSports').addEventListener('click', function(e) {
+            e.preventDefault();
+            closeMobileMenu();
+            el('navLiveSports').click();
+            document.querySelectorAll('.mobile-menu-item').forEach(function(m) { m.classList.remove('active'); });
+            this.classList.add('active');
+        });
+
+        // Check if navigated back with #sports hash
+        if (window.location.hash === '#sports') {
+            setTimeout(() => {
+                el('navLiveSports').click();
+            }, 100);
+        }
     })();
     </script>
+    <script src="./sports.js"></script>
 </body>
 </html>
 

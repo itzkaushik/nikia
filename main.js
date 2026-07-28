@@ -293,8 +293,19 @@ const SYNC_BRIDGE_SCRIPT = `
     // --- VIDEO SYNC BRIDGE ---
     (function() {
       var syncedVideo = null;
-      var expectedPlayState = null;
-      var expectedSeekTime = -1;
+      // Commands received from the room are programmatic.  HLS players may
+      // land on a nearby keyframe, so never compare the final time to the
+      // requested time to decide whether a seek is local or remote.
+      window.isProgrammaticSeek = false;
+      window.isProgrammaticPlay = false;
+      window.isProgrammaticPause = false;
+
+      function muteNext(flagName) {
+        window[flagName] = true;
+        // Some provider players do not emit the matching event.  Do not leave
+        // the bridge muted forever in that case.
+        setTimeout(function() { window[flagName] = false; }, 5000);
+      }
 
       function hookVideo(video) {
         if (syncedVideo === video) return;
@@ -302,27 +313,38 @@ const SYNC_BRIDGE_SCRIPT = `
         console.log('Nikia Sync Bridge: Found <video>, attaching listeners');
 
         video.addEventListener('play', function() {
-          if (expectedPlayState === 'play') {
-            expectedPlayState = null;
+          if (window.isProgrammaticPlay) {
+            window.isProgrammaticPlay = false;
             return;
           }
           window.top.postMessage({ type: 'Nikia_IFRAME_EVENT', event: 'play', currentTime: video.currentTime }, '*');
         });
 
         video.addEventListener('pause', function() {
-          if (expectedPlayState === 'pause') {
-            expectedPlayState = null;
+          if (window.isProgrammaticPause) {
+            window.isProgrammaticPause = false;
             return;
           }
           window.top.postMessage({ type: 'Nikia_IFRAME_EVENT', event: 'pause', currentTime: video.currentTime }, '*');
         });
 
         video.addEventListener('seeked', function() {
-          if (expectedSeekTime !== -1 && Math.abs(video.currentTime - expectedSeekTime) < 1) {
-            expectedSeekTime = -1;
+          if (window.isProgrammaticSeek) {
+            window.isProgrammaticSeek = false;
             return;
           }
           window.top.postMessage({ type: 'Nikia_IFRAME_EVENT', event: 'seek', currentTime: video.currentTime }, '*');
+        });
+
+        video.addEventListener('waiting', function() {
+          // A remote command often makes an HLS player briefly buffer.  That
+          // is expected and must not pause the room again.
+          if (window.isProgrammaticSeek || window.isProgrammaticPlay || window.isProgrammaticPause) return;
+          window.top.postMessage({ type: 'Nikia_IFRAME_EVENT', event: 'buffer_warning', currentTime: video.currentTime }, '*');
+        });
+
+        video.addEventListener('playing', function() {
+          window.top.postMessage({ type: 'Nikia_IFRAME_EVENT', event: 'buffer_resolved', currentTime: video.currentTime }, '*');
         });
       }
 
@@ -340,26 +362,37 @@ const SYNC_BRIDGE_SCRIPT = `
 
         var cmd = e.data;
         try {
-          if (cmd.action === 'heartbeat_req') {
-            window.top.postMessage({ type: 'Nikia_IFRAME_EVENT', event: 'heartbeat', currentTime: syncedVideo.currentTime }, '*');
+          if (cmd.action === 'state_req') {
+            window.top.postMessage({
+              type: 'Nikia_IFRAME_EVENT',
+              event: 'state',
+              currentTime: syncedVideo.currentTime,
+              paused: syncedVideo.paused
+            }, '*');
             return;
           }
-          
+
           if (cmd.action === 'play') {
-            if (!syncedVideo.paused) return; // Already playing
-            expectedPlayState = 'play';
-            syncedVideo.currentTime = cmd.currentTime;
-            syncedVideo.play().catch(function(){});
-          } else if (cmd.action === 'pause') {
-            if (syncedVideo.paused) return; // Already paused
-            expectedPlayState = 'pause';
-            syncedVideo.currentTime = cmd.currentTime;
-            syncedVideo.pause();
-          } else if (cmd.action === 'seek') {
-            if (Math.abs(syncedVideo.currentTime - cmd.currentTime) > 1) {
-              expectedSeekTime = cmd.currentTime;
+            if (typeof cmd.currentTime === 'number') {
+              muteNext('isProgrammaticSeek');
               syncedVideo.currentTime = cmd.currentTime;
             }
+            if (syncedVideo.paused) {
+              muteNext('isProgrammaticPlay');
+              syncedVideo.play().catch(function(){});
+            }
+          } else if (cmd.action === 'pause') {
+            if (typeof cmd.currentTime === 'number') {
+              muteNext('isProgrammaticSeek');
+              syncedVideo.currentTime = cmd.currentTime;
+            }
+            if (!syncedVideo.paused) {
+              muteNext('isProgrammaticPause');
+              syncedVideo.pause();
+            }
+          } else if (cmd.action === 'seek') {
+            muteNext('isProgrammaticSeek');
+            syncedVideo.currentTime = cmd.currentTime;
           }
         } catch (err) {
           console.error('Nikia Sync Bridge Error:', err);
