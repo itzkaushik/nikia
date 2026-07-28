@@ -23,6 +23,7 @@ public class ApkInstallerPlugin extends Plugin {
 
     private long downloadID = -1;
     private BroadcastReceiver onDownloadComplete;
+    private PluginCall pendingCall;
 
     @PluginMethod
     public void downloadAndInstall(PluginCall call) {
@@ -35,23 +36,44 @@ public class ApkInstallerPlugin extends Plugin {
         }
 
         try {
+            Context context = getContext();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                    !context.getPackageManager().canRequestPackageInstalls()) {
+                Intent manageIntent = new Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+                        .setData(Uri.parse("package:" + context.getPackageName()))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(manageIntent);
+                call.reject("INSTALL_PERMISSION_REQUIRED");
+                return;
+            }
+
+            if (pendingCall != null) {
+                call.reject("An update download is already in progress");
+                return;
+            }
+
             DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
             request.setTitle("Downloading Nikia Update");
             request.setDescription("Downloading latest version...");
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
             
             // Download to app-specific external storage to avoid requiring WRITE_EXTERNAL_STORAGE
-            request.setDestinationInExternalFilesDir(getContext(), Environment.DIRECTORY_DOWNLOADS, filename);
+            request.setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, filename);
 
-            DownloadManager manager = (DownloadManager) getContext().getSystemService(Context.DOWNLOAD_SERVICE);
+            DownloadManager manager = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
+            if (manager == null) {
+                call.reject("Download service is unavailable");
+                return;
+            }
             
             // Delete old file if exists
-            File file = new File(getContext().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), filename);
+            File file = new File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), filename);
             if (file.exists()) {
                 file.delete();
             }
 
             downloadID = manager.enqueue(request);
+            pendingCall = call;
 
             if (onDownloadComplete == null) {
                 onDownloadComplete = new BroadcastReceiver() {
@@ -59,7 +81,7 @@ public class ApkInstallerPlugin extends Plugin {
                     public void onReceive(Context context, Intent intent) {
                         long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
                         if (downloadID == id) {
-                            installApk(filename);
+                            installDownloadedApk(filename);
                         }
                     }
                 };
@@ -71,29 +93,19 @@ public class ApkInstallerPlugin extends Plugin {
                 }
             }
 
-            JSObject ret = new JSObject();
-            ret.put("success", true);
-            call.resolve(ret);
         } catch (Exception e) {
+            pendingCall = null;
             call.reject("Download failed", e);
         }
     }
 
-    private void installApk(String filename) {
+    private void installDownloadedApk(String filename) {
         try {
             Context context = getContext();
             File file = new File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), filename);
-            if (!file.exists()) return;
-
-            // Check if unknown app installation permission is granted on Android O (API 26+)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                if (!context.getPackageManager().canRequestPackageInstalls()) {
-                    Intent manageIntent = new Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
-                            .setData(Uri.parse("package:" + context.getPackageName()))
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    context.startActivity(manageIntent);
-                    return;
-                }
+            if (!file.exists()) {
+                rejectPendingCall("Downloaded APK was not found", null);
+                return;
             }
 
             Uri apkUri;
@@ -108,8 +120,23 @@ public class ApkInstallerPlugin extends Plugin {
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             context.startActivity(intent);
+
+            if (pendingCall != null) {
+                JSObject ret = new JSObject();
+                ret.put("success", true);
+                pendingCall.resolve(ret);
+                pendingCall = null;
+            }
         } catch (Exception e) {
             e.printStackTrace();
+            rejectPendingCall("Could not start the package installer", e);
         }
+    }
+
+    private void rejectPendingCall(String message, Exception exception) {
+        if (pendingCall == null) return;
+        if (exception == null) pendingCall.reject(message);
+        else pendingCall.reject(message, exception);
+        pendingCall = null;
     }
 }

@@ -105,6 +105,12 @@ window.nikiaMobile = {
               await ApkInstaller.downloadAndInstall({ url: proxyUrl, filename: apkName });
               btn.innerText = "Installing...";
             } catch (err) {
+              if (String(err && err.message || err).includes('INSTALL_PERMISSION_REQUIRED')) {
+                btn.innerText = "Allow installs in Settings, then tap here again";
+                btn.style.opacity = "1";
+                btn.style.pointerEvents = "auto";
+                return;
+              }
               console.error("Native installer failed, falling back to browser", err);
               window.open(proxyUrl, '_system');
             }

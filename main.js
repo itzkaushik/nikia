@@ -4,7 +4,7 @@
 // Creates the window, strips iframe security headers, blocks popups/redirects,
 // and injects the Video Sync Bridge into every provider iframe.
 
-const { app, BrowserWindow, session, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, session, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -555,26 +555,43 @@ app.whenReady().then(() => {
 
   createWindow();
 
-  // Check for updates
+  // Unsigned/ad-hoc-signed macOS app bundles cannot reliably replace
+  // themselves. Offer the release download instead of attempting a broken
+  // in-place update; Windows keeps electron-updater's native flow.
+  if (process.platform === 'darwin') {
+    autoUpdater.autoDownload = false;
+    autoUpdater.autoInstallOnAppQuit = false;
+    autoUpdater.on('update-available', (info) => {
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'Update Available',
+        message: `Nikia ${info.version} is available. Download the new app from GitHub.`,
+        buttons: ['Open Download', 'Later']
+      }).then((result) => {
+        if (result.response === 0) {
+          shell.openExternal('https://github.com/itzkaushik/nikia/releases/latest');
+        }
+      });
+    });
+  } else {
+    autoUpdater.on('update-downloaded', () => {
+      log.info('Update downloaded, asking user to restart.');
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'Update Ready',
+        message: 'A new version of Nikia has been downloaded. Restart the application to apply the updates.',
+        buttons: ['Restart Now', 'Later']
+      }).then((result) => {
+        if (result.response === 0) autoUpdater.quitAndInstall();
+      });
+    });
+  }
+
   try {
     autoUpdater.checkForUpdatesAndNotify();
   } catch (err) {
     log.error('Failed to check for updates:', err);
   }
-
-  autoUpdater.on('update-downloaded', (info) => {
-    log.info('Update downloaded, asking user to restart.');
-    dialog.showMessageBox({
-      type: 'info',
-      title: 'Update Ready',
-      message: 'A new version of Nikia has been downloaded. Restart the application to apply the updates.',
-      buttons: ['Restart Now', 'Later']
-    }).then((returnValue) => {
-      if (returnValue.response === 0) {
-        autoUpdater.quitAndInstall();
-      }
-    });
-  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
