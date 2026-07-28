@@ -600,6 +600,7 @@ app.whenReady().then(() => {
     if (details.url.includes('strmd.st') || details.url.includes('streamed.pk') || details.url.includes('.m3u8') || details.url.includes('.ts')) {
       details.requestHeaders['Referer'] = 'https://streamed.pk/';
       details.requestHeaders['Origin'] = 'https://streamed.pk';
+      details.requestHeaders['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
     }
     callback({ cancel: false, requestHeaders: details.requestHeaders });
   });
