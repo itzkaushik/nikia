@@ -1379,9 +1379,11 @@
                 if (currentRoomMaxMembers) wsUrl += '&max=' + currentRoomMaxMembers;
             }
             
-            socket = new WebSocket(wsUrl);
+            var connectingSocket = new WebSocket(wsUrl);
+            socket = connectingSocket;
 
-            socket.onopen = function() {
+            connectingSocket.onopen = function() {
+                if (socket !== connectingSocket) return;
                 el('syncBadge').classList.remove('disconnected');
                 el('syncBadge').classList.add('in-room');
                 el('syncLabel').textContent = 'Room: ' + currentRoomCode;
@@ -1390,7 +1392,10 @@
                 el('roomCodeDisplay').textContent = currentRoomCode;
 
             };
-            socket.onclose = function(e) {
+            connectingSocket.onclose = function(e) {
+                // An older socket can close after a replacement connection is
+                // already open. It must not clear or reconnect the new socket.
+                if (socket !== connectingSocket) return;
                 el('syncBadge').classList.add('disconnected');
                 el('syncBadge').classList.remove('in-room');
                 el('syncLabel').textContent = 'Disconnected';
@@ -1413,7 +1418,8 @@
                     }, 3000);
                 }
             };
-            socket.onmessage = function(event) {
+            connectingSocket.onmessage = function(event) {
+                if (socket !== connectingSocket) return;
                 var data = JSON.parse(event.data);
                 console.log('WS received:', data.type, data);
 
