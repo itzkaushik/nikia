@@ -96,16 +96,8 @@ jobs:
           AWS_DEFAULT_REGION: auto
           R2_ENDPOINT: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          
-          echo "--- TEST 1: Testing Credentials ---"
-          aws s3 ls s3://nikia-releases/mac/ --endpoint-url $R2_ENDPOINT || echo "TEST 1 FAILED: Check your Secret Key for typos or spaces!"
-          
-          echo "--- TEST 2: Testing Small Upload ---"
-          echo "test" > test.txt
-          aws s3 cp test.txt s3://nikia-releases/mac/test.txt --endpoint-url $R2_ENDPOINT || echo "TEST 2 FAILED"
-          
           set -e
+          VERSION=${GITHUB_REF#refs/tags/v}
           
           # Find latest-mac.yml which might be nested (e.g. artifacts/dist/latest-mac.yml)
           YML_FILE=$(find artifacts -name "latest-mac.yml" | head -n 1)
