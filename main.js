@@ -13,6 +13,8 @@ const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
 const { machineIdSync } = require('node-machine-id');
 
+const MAC_UPDATE_FEED_URL = 'https://nikia-updates.cine-sync.workers.dev/mac';
+
 // Setup Auto Updater Logging
 log.transports.file.level = 'info';
 autoUpdater.logger = log;
@@ -614,15 +616,16 @@ app.whenReady().then(() => {
   if (process.platform === 'darwin') {
     autoUpdater.autoDownload = false;
     autoUpdater.autoInstallOnAppQuit = false;
+    autoUpdater.setFeedURL({ provider: 'generic', url: MAC_UPDATE_FEED_URL });
     autoUpdater.on('update-available', (info) => {
       dialog.showMessageBox(mainWindow, {
         type: 'info',
         title: 'Update Available',
-        message: `Nikia ${info.version} is available. Download the new app from GitHub.`,
+        message: `Nikia ${info.version} is available. Download the new app now.`,
         buttons: ['Open Download', 'Later']
       }).then((result) => {
         if (result.response === 0) {
-          shell.openExternal('https://github.com/itzkaushik/nikia/releases/latest');
+          shell.openExternal(`${MAC_UPDATE_FEED_URL}/download?arch=${encodeURIComponent(process.arch)}`);
         }
       });
     });
@@ -640,11 +643,9 @@ app.whenReady().then(() => {
     });
   }
 
-  try {
-    autoUpdater.checkForUpdatesAndNotify();
-  } catch (err) {
+  autoUpdater.checkForUpdates().catch((err) => {
     log.error('Failed to check for updates:', err);
-  }
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
