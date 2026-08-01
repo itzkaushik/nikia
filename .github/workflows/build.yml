@@ -97,38 +97,28 @@ jobs:
           npm install -g wrangler
           VERSION=${GITHUB_REF#refs/tags/v}
           
-          # Only proceed if latest-mac.yml exists, which indicates a Mac build was generated
-          if [ -f artifacts/latest-mac.yml ]; then
-            echo "Mac release files found. Uploading to R2..."
+          # Find latest-mac.yml which might be nested (e.g. artifacts/dist/latest-mac.yml)
+          YML_FILE=$(find artifacts -name "latest-mac.yml" | head -n 1)
+          
+          if [ -n "$YML_FILE" ]; then
+            echo "Mac release files found at $YML_FILE. Uploading to R2..."
             
             # Upload ZIPs
-            for file in artifacts/Nikia-*.zip; do
-              if [ -f "$file" ]; then
-                wrangler r2 object put "nikia-releases/mac/$(basename "$file")" --file "$file" --content-type application/octet-stream
-              fi
+            find artifacts -name "Nikia-*.zip" | while read file; do
+              wrangler r2 object put "nikia-releases/mac/$(basename "$file")" --file "$file" --content-type application/octet-stream
             done
             
             # Upload DMGs
-            for file in artifacts/Nikia-*.dmg; do
-              if [ -f "$file" ]; then
-                wrangler r2 object put "nikia-releases/mac/$(basename "$file")" --file "$file" --content-type application/octet-stream
-              fi
+            find artifacts -name "Nikia-*.dmg" | while read file; do
+              wrangler r2 object put "nikia-releases/mac/$(basename "$file")" --file "$file" --content-type application/octet-stream
             done
             
             # Upload latest-mac.yml
-            wrangler r2 object put "nikia-releases/mac/latest-mac.yml" --file "artifacts/latest-mac.yml" --content-type text/yaml --cache-control no-store
+            wrangler r2 object put "nikia-releases/mac/latest-mac.yml" --file "$YML_FILE" --content-type text/yaml --cache-control no-store
             
             # Generate and upload latest.json
-            ARM64_DMG=""
-            X64_DMG=""
-            
-            if ls artifacts/Nikia-*-arm64.dmg 1> /dev/null 2>&1; then
-              ARM64_DMG=$(basename "$(ls artifacts/Nikia-*-arm64.dmg)")
-            fi
-            
-            if ls artifacts/Nikia-*-x64.dmg 1> /dev/null 2>&1; then
-              X64_DMG=$(basename "$(ls artifacts/Nikia-*-x64.dmg)")
-            fi
+            ARM64_DMG=$(find artifacts -name "Nikia-*-arm64.dmg" -exec basename {} \; | head -n 1)
+            X64_DMG=$(find artifacts -name "Nikia-*-x64.dmg" -exec basename {} \; | head -n 1)
             
             echo '{' > latest.json
             echo "  \"version\": \"${VERSION}\"," >> latest.json
@@ -141,5 +131,5 @@ jobs:
             wrangler r2 object put "nikia-releases/mac/latest.json" --file ./latest.json --content-type application/json --cache-control no-store
             echo "R2 upload complete."
           else
-            echo "No Mac release files found. Skipping R2 upload."
+            echo "No Mac release files found in artifacts. Skipping R2 upload."
           fi
