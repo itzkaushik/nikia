@@ -91,30 +91,32 @@ jobs:
 
       - name: Upload Mac Releases to Cloudflare R2
         env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ENDPOINT: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
         run: |
-          npm install -g wrangler
+          set -e
           VERSION=${GITHUB_REF#refs/tags/v}
           
           # Find latest-mac.yml which might be nested (e.g. artifacts/dist/latest-mac.yml)
           YML_FILE=$(find artifacts -name "latest-mac.yml" | head -n 1)
           
           if [ -n "$YML_FILE" ]; then
-            echo "Mac release files found at $YML_FILE. Uploading to R2..."
+            echo "Mac release files found at $YML_FILE. Uploading to R2 via S3 API..."
             
             # Upload ZIPs
             find artifacts -name "Nikia-*.zip" | while read file; do
-              wrangler r2 object put "nikia-releases/mac/$(basename "$file")" --file "$file" --content-type application/octet-stream
+              aws s3 cp "$file" s3://nikia-releases/mac/$(basename "$file") --endpoint-url $R2_ENDPOINT --content-type application/octet-stream
             done
             
             # Upload DMGs
             find artifacts -name "Nikia-*.dmg" | while read file; do
-              wrangler r2 object put "nikia-releases/mac/$(basename "$file")" --file "$file" --content-type application/octet-stream
+              aws s3 cp "$file" s3://nikia-releases/mac/$(basename "$file") --endpoint-url $R2_ENDPOINT --content-type application/octet-stream
             done
             
             # Upload latest-mac.yml
-            wrangler r2 object put "nikia-releases/mac/latest-mac.yml" --file "$YML_FILE" --content-type text/yaml --cache-control no-store
+            aws s3 cp "$YML_FILE" s3://nikia-releases/mac/latest-mac.yml --endpoint-url $R2_ENDPOINT --content-type text/yaml --cache-control no-store
             
             # Generate and upload latest.json
             ARM64_DMG=$(find artifacts -name "Nikia-*-arm64.dmg" -exec basename {} \; | head -n 1)
@@ -128,7 +130,7 @@ jobs:
             echo '  }' >> latest.json
             echo '}' >> latest.json
             
-            wrangler r2 object put "nikia-releases/mac/latest.json" --file ./latest.json --content-type application/json --cache-control no-store
+            aws s3 cp latest.json s3://nikia-releases/mac/latest.json --endpoint-url $R2_ENDPOINT --content-type application/json --cache-control no-store
             echo "R2 upload complete."
           else
             echo "No Mac release files found in artifacts. Skipping R2 upload."
