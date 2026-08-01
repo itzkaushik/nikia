@@ -489,6 +489,10 @@ function injectIntoAllFrames() {
   }
 }
 
+ipcMain.handle('get-machine-id', () => {
+  return machineIdSync();
+});
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -509,10 +513,6 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
-
-  ipcMain.handle('get-machine-id', () => {
-    return machineIdSync();
-  });
 
   // ============================================================================
   // POPUP BLOCKER â€” Block all window.open() calls
