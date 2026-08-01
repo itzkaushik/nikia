@@ -99,6 +99,26 @@ jobs:
           set -e
           VERSION=${GITHUB_REF#refs/tags/v}
           
+          echo "--- DEBUG: Verifying S3 Credentials Format ---"
+          AK_LEN=${#AWS_ACCESS_KEY_ID}
+          SK_LEN=${#AWS_SECRET_ACCESS_KEY}
+          echo "Access Key Length: $AK_LEN (Expected 32)"
+          echo "Secret Key Length: $SK_LEN (Expected 64)"
+          
+          if [ "$SK_LEN" -ne 64 ]; then
+            echo "ERROR: Your R2_SECRET_ACCESS_KEY is $SK_LEN characters long. An S3 Secret Access Key from Cloudflare MUST be exactly 64 characters."
+            echo "You likely copied the 'R2 Token Value' instead of the 'Secret Access Key' under 'Credentials for S3 Clients'."
+            exit 1
+          fi
+          
+          echo "--- DEBUG: Testing Small Upload ---"
+          echo "test" > test.txt
+          if ! aws s3 cp test.txt s3://nikia-releases/mac/test.txt --endpoint-url $R2_ENDPOINT --region auto; then
+             echo "ERROR: Small upload failed. Your credentials are fundamentally invalid or the Bucket name 'nikia-releases' doesn't match."
+             exit 1
+          fi
+          echo "Small upload passed! Credentials are good."
+          
           # Find latest-mac.yml which might be nested (e.g. artifacts/dist/latest-mac.yml)
           YML_FILE=$(find artifacts -name "latest-mac.yml" | head -n 1)
           
