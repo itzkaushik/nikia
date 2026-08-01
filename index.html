@@ -1356,10 +1356,17 @@
         var socket = null;
         var currentRoomCode = null;
         var currentRoomMaxMembers = null;
+        var reconnectTimer = null;
+        var presenceInterval = null;
         var suppressLocalEventsUntil = 0;
         var hostPausedForBuffer = false;
         var hostWasPlayingBeforeBuffer = false;
         var pendingIframeStateAction = null;
+        var iframeBridgeReady = false;
+        var desiredIframeState = null;
+        var pendingTorrentCommand = null;
+        var torrentPlaybackReady = false;
+        var bufferingMembers = new Set();
 
         function generateRoomCode() {
             var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -1369,6 +1376,8 @@
         }
 
         function connectToRoom(roomCode, isHost = false, maxMembers = null) {
+            if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+            if (presenceInterval) { clearInterval(presenceInterval); presenceInterval = null; }
             if (socket) { socket.close(); socket = null; }
             currentRoomCode = roomCode.toUpperCase();
             if (isHost && maxMembers) currentRoomMaxMembers = maxMembers;
@@ -1390,12 +1399,20 @@
                 el('roomNotConnected').style.display = 'none';
                 el('roomConnected').style.display = 'block';
                 el('roomCodeDisplay').textContent = currentRoomCode;
-
+                wsSend({ type: 'presence_ping' });
+                // Tell the server our player is ready to receive stored state.
+                // For late joiners the server waits for this before delivering
+                // provider / playback position so nothing arrives too early.
+                wsSend({ type: 'client_ready' });
+                presenceInterval = setInterval(function() {
+                    wsSend({ type: 'presence_ping' });
+                }, 15000);
             };
             connectingSocket.onclose = function(e) {
                 // An older socket can close after a replacement connection is
                 // already open. It must not clear or reconnect the new socket.
                 if (socket !== connectingSocket) return;
+                if (presenceInterval) { clearInterval(presenceInterval); presenceInterval = null; }
                 el('syncBadge').classList.add('disconnected');
                 el('syncBadge').classList.remove('in-room');
                 el('syncLabel').textContent = 'Disconnected';
@@ -1413,14 +1430,21 @@
                 }
                 
                 if (currentRoomCode) {
-                    setTimeout(function() {
+                    reconnectTimer = setTimeout(function() {
+                        reconnectTimer = null;
                         if (currentRoomCode) connectToRoom(currentRoomCode, amIHost, currentRoomMaxMembers);
                     }, 3000);
                 }
             };
             connectingSocket.onmessage = function(event) {
                 if (socket !== connectingSocket) return;
-                var data = JSON.parse(event.data);
+                var data;
+                try {
+                    data = JSON.parse(event.data);
+                } catch (err) {
+                    console.warn('Ignoring malformed room message');
+                    return;
+                }
                 console.log('WS received:', data.type, data);
 
                 if (data.type === 'sync_media') {
@@ -1430,6 +1454,10 @@
 
                 if (data.type === 'sync_start') {
                     if (!amIHost) {
+                        currentPlayMode = 'iframe';
+                        pendingTorrentCommand = null;
+                        torrentPlaybackReady = false;
+                        if (window.nikia && window.nikia.stopTorrent) window.nikia.stopTorrent();
                         currentSeason = data.season || 1;
                         currentEpisode = data.episode || 1;
                         el('detailsView').style.display = 'none';
@@ -1442,10 +1470,15 @@
                 if (data.type === 'sync_torrent') {
                     if (!amIHost) {
                         currentPlayMode = 'torrent';
+                        iframeBridgeReady = false;
+                        desiredIframeState = null;
+                        pendingTorrentCommand = null;
+                        torrentPlaybackReady = false;
                         el('detailsView').style.display = 'none';
                         el('playerView').style.display = 'block';
                         el('serverSection').style.display = 'none';
                         el('iframeContainer').classList.remove('visible');
+                        el('embedFrame').src = 'about:blank';
                         el('playerContainer').style.display = 'block';
                         el('torrentProgressBar').style.display = 'block';
                         el('torrentProgressLabel').textContent = 'Connecting to peers...';
@@ -1464,12 +1497,20 @@
                 }
 
                 if (data.type === 'buffer_warning') {
-                    if (amIHost) pauseRoomForBuffer();
+                    if (amIHost) pauseRoomForBuffer(data.memberId, data.paused);
                     return;
                 }
 
                 if (data.type === 'buffer_resolved') {
-                    if (amIHost) resumeRoomAfterBuffer();
+                    if (amIHost) resumeRoomAfterBuffer(data.memberId);
+                    return;
+                }
+
+                if (data.type === 'host_changed') {
+                    if (data.newHostMachineId === currentMachineId) {
+                        amIHost = true;
+                        console.log('Host migration: this client is now the host');
+                    }
                     return;
                 }
 
@@ -1477,36 +1518,22 @@
                     // A host is authoritative and never follows a client.
                     if (amIHost) return;
 
-                    var targetTime = data.currentTime;
-                    if (data.type === 'play' && typeof targetTime === 'number' && data.sentAt) {
-                        targetTime += Math.max(0, (Date.now() - data.sentAt) / 1000);
-                    }
-                    suppressLocalEventsUntil = Date.now() + 1000;
-
-                    if (currentPlayMode === 'torrent') {
-                        if (typeof targetTime === 'number') player.currentTime(targetTime);
-                        if (data.type === 'play') player.play();
-                        else if (data.type === 'pause') player.pause();
-                    } else {
-                        var iframe = el('embedFrame');
-                        if (iframe && iframe.contentWindow) {
-                            iframe.contentWindow.postMessage({
-                                type: 'Nikia_SYNC_COMMAND',
-                                action: data.type,
-                                currentTime: targetTime
-                            }, '*');
-                        }
-                    }
+                    applyRemotePlayback(data);
                     return;
                 }
             };
         }
 
         function disconnectRoom() {
+            if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+            if (presenceInterval) { clearInterval(presenceInterval); presenceInterval = null; }
             if (socket) { socket.close(); socket = null; }
             currentRoomCode = null;
             currentRoomMaxMembers = null;
             amIHost = false;
+            hostPausedForBuffer = false;
+            hostWasPlayingBeforeBuffer = false;
+            bufferingMembers.clear();
             el('syncBadge').classList.add('disconnected');
             el('syncBadge').classList.remove('in-room');
             el('syncLabel').textContent = 'No Room';
@@ -1516,12 +1543,64 @@
 
         function wsSend(data) {
             if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify(data));
+                try {
+                    socket.send(JSON.stringify(data));
+                } catch (err) {
+                    console.warn('Room message could not be sent:', err);
+                }
+            }
+        }
+
+        function canControlRoom() {
+            if (!currentRoomCode || amIHost) return true;
+            wsSend({ type: 'sync_request_state' });
+            return false;
+        }
+
+        function postIframeCommand(action, currentTime) {
+            var iframe = el('embedFrame');
+            if (!iframe || !iframe.contentWindow || !iframeBridgeReady) return false;
+            iframe.contentWindow.postMessage({
+                type: 'Nikia_SYNC_COMMAND',
+                action: action,
+                currentTime: currentTime
+            }, '*');
+            return true;
+        }
+
+        function applyRemoteTorrentCommand(command) {
+            if (!player || !torrentPlaybackReady || player.readyState() < 1) {
+                pendingTorrentCommand = command;
+                return;
+            }
+
+            suppressLocalEventsUntil = Date.now() + 2000;
+            if (typeof command.currentTime === 'number') player.currentTime(command.currentTime);
+            if (command.type === 'play') player.play();
+            else if (command.type === 'pause') player.pause();
+        }
+
+        function applyRemotePlayback(data) {
+            var targetTime = data.currentTime;
+            if (data.type === 'play' && typeof targetTime === 'number' && data.sentAt) {
+                targetTime += Math.max(0, (Date.now() - data.sentAt) / 1000);
+            }
+
+            if (currentPlayMode === 'torrent') {
+                applyRemoteTorrentCommand({ type: data.type, currentTime: targetTime });
+            } else {
+                desiredIframeState = { action: data.type, currentTime: targetTime };
+                postIframeCommand(data.type, targetTime);
             }
         }
 
         function publishHostControl(action, currentTime, reason) {
             if (!amIHost) return;
+            if (reason === 'host_input' && (action === 'play' || action === 'pause')) {
+                hostPausedForBuffer = false;
+                hostWasPlayingBeforeBuffer = false;
+                bufferingMembers.clear();
+            }
             wsSend({
                 type: action,
                 currentTime: currentTime,
@@ -1541,30 +1620,38 @@
             }
 
             pendingIframeStateAction = action;
-            var iframe = el('embedFrame');
-            if (iframe && iframe.contentWindow) {
-                iframe.contentWindow.postMessage({ type: 'Nikia_SYNC_COMMAND', action: 'state_req' }, '*');
-            }
+            postIframeCommand('state_req');
         }
 
-        function pauseRoomForBuffer() {
-            if (!amIHost || hostPausedForBuffer) return;
+        function pauseRoomForBuffer(memberId, wasPaused) {
+            if (!amIHost) return;
+            bufferingMembers.add(memberId || 'host');
+            if (hostPausedForBuffer) return;
             hostPausedForBuffer = true;
-            hostWasPlayingBeforeBuffer = currentPlayMode === 'torrent' ? !player.paused() : true;
+            hostWasPlayingBeforeBuffer = currentPlayMode === 'torrent' ? !player.paused() : wasPaused !== true;
             if (!hostWasPlayingBeforeBuffer) return;
 
+            // Broadcast a pause to all followers.  Do NOT programmatically
+            // pause the host's own iframe video — that would prevent the
+            // browser from ever firing 'playing' once the buffer completes,
+            // permanently deadlocking the room.
             suppressLocalEventsUntil = Date.now() + 1000;
             if (currentPlayMode === 'torrent') {
                 var t = player.currentTime();
                 player.pause();
                 publishHostControl('pause', t, 'buffer_pause');
             } else {
-                requestHostState('buffer_pause');
+                // Get current iframe time and broadcast pause to followers
+                // without issuing a pause command back to the iframe.
+                var fallbackTime = window.__lastKnownIframeTime || 0;
+                publishHostControl('pause', fallbackTime, 'buffer_pause');
             }
         }
 
-        function resumeRoomAfterBuffer() {
+        function resumeRoomAfterBuffer(memberId) {
             if (!amIHost || !hostPausedForBuffer) return;
+            bufferingMembers.delete(memberId || 'host');
+            if (bufferingMembers.size > 0) return;
             hostPausedForBuffer = false;
             if (!hostWasPlayingBeforeBuffer) return;
 
@@ -1574,7 +1661,10 @@
                 player.play();
                 publishHostControl('play', t, 'buffer_resume');
             } else {
-                requestHostState('buffer_resume');
+                // Broadcast play to followers without commanding the host's
+                // own iframe — the video is already playing naturally.
+                var fallbackTime = window.__lastKnownIframeTime || 0;
+                publishHostControl('play', fallbackTime, 'buffer_resume');
             }
         }
 
@@ -1627,6 +1717,20 @@
                 if (event.data.currentTime !== undefined) {
                     window.__lastKnownIframeTime = event.data.currentTime;
                 }
+
+                if (event.data.event === 'ready') {
+                    // Late joiners can receive the room state before the
+                    // provider has created its actual <video>. Apply the most
+                    // recent command only after the bridge confirms readiness.
+                    if (currentPlayMode !== 'iframe') return;
+                    iframeBridgeReady = true;
+                    if (pendingIframeStateAction) {
+                        postIframeCommand('state_req');
+                    } else if (desiredIframeState) {
+                        postIframeCommand(desiredIframeState.action, desiredIframeState.currentTime);
+                    }
+                    return;
+                }
                 
                 if (event.data.event === 'state') {
                     if (!amIHost || !pendingIframeStateAction) return;
@@ -1636,26 +1740,21 @@
                     if (stateAction === 'buffer_pause') targetAction = 'pause';
                     if (stateAction === 'buffer_resume') targetAction = 'play';
 
-                    var iframe = el('embedFrame');
-                    if (iframe && iframe.contentWindow && stateAction !== 'sync_request') {
-                        iframe.contentWindow.postMessage({
-                            type: 'Nikia_SYNC_COMMAND',
-                            action: targetAction,
-                            currentTime: event.data.currentTime
-                        }, '*');
+                    if (stateAction !== 'sync_request') {
+                        postIframeCommand(targetAction, event.data.currentTime);
                     }
                     publishHostControl(targetAction, event.data.currentTime, stateAction);
                     return;
                 }
                 
                 if (event.data.event === 'buffer_warning') {
-                    if (amIHost) pauseRoomForBuffer();
-                    else wsSend({ type: 'buffer_warning' });
+                    if (amIHost) pauseRoomForBuffer(currentMachineId || 'host', event.data.paused);
+                    else wsSend({ type: 'buffer_warning', paused: event.data.paused });
                     return;
                 }
 
                 if (event.data.event === 'buffer_resolved') {
-                    if (amIHost) resumeRoomAfterBuffer();
+                    if (amIHost) resumeRoomAfterBuffer(currentMachineId || 'host');
                     else wsSend({ type: 'buffer_resolved' });
                     return;
                 }
@@ -1891,8 +1990,8 @@
         // Open watch page
         // fromSync = true means the Guest is being pulled here by a sync command
         function openWatch(id, type, fromSync) {
+            if (!fromSync && !canControlRoom()) return;
             if (!fromSync) {
-                amIHost = true;
                 // Broadcast to the room: "I selected this movie"
                 wsSend({ type: 'sync_media', id: id, mediaType: type });
             }
@@ -1902,6 +2001,11 @@
             el('embedFrame').src = 'about:blank';
             el('iframeContainer').classList.remove('visible');
             el('playerContainer').style.display = 'none';
+            iframeBridgeReady = false;
+            desiredIframeState = null;
+            pendingTorrentCommand = null;
+            torrentPlaybackReady = false;
+            pendingIframeStateAction = null;
 
             tmdbFetch('/' + type + '/' + id + '?append_to_response=credits,external_ids').then(function(detail) {
                 currentMedia = {
@@ -1950,6 +2054,7 @@
 
         // Source Modal: Web Player option
         el('sourceWeb').addEventListener('click', function() {
+            if (!canControlRoom()) return;
             el('sourceModal').style.display = 'none';
             currentPlayMode = 'iframe';
             el('detailsView').style.display = 'none';
@@ -1960,6 +2065,7 @@
 
         // Source Modal: Torrent option
         el('sourceTorrent').addEventListener('click', function() {
+            if (!canControlRoom()) return;
             el('sourceModal').style.display = 'none';
             el('torrentPickerModal').style.display = 'flex';
             el('torrentList').innerHTML = '<div style="padding:30px;text-align:center;color:var(--text-muted)"><div class="torrent-spinner"></div>Searching for torrents...</div>';
@@ -2048,9 +2154,12 @@
         var activeTorrentIdx = -1;
 
         function startTorrentStream(stream) {
+            if (!canControlRoom()) return;
             el('torrentPickerModal').style.display = 'none';
             el('sourceDrawerOverlay').classList.remove('open');
             currentPlayMode = 'torrent';
+            pendingTorrentCommand = null;
+            torrentPlaybackReady = false;
 
             // Track active source index
             activeTorrentIdx = cachedTorrentStreams.indexOf(stream);
@@ -2064,6 +2173,7 @@
             el('playerView').style.display = 'block';
             el('serverSection').style.display = 'none'; // Hide server tabs for torrents
             el('iframeContainer').classList.remove('visible');
+            el('embedFrame').src = 'about:blank';
             el('playerContainer').style.display = 'block';
             el('torrentProgressBar').style.display = 'block';
             el('torrentProgressLabel').textContent = 'Connecting to peers...';
@@ -2071,6 +2181,9 @@
 
             // Show "Change Source" button
             el('sourceSwitcherBtn').classList.add('visible');
+            iframeBridgeReady = false;
+            desiredIframeState = null;
+            pendingIframeStateAction = null;
 
             // Broadcast to sync room
             wsSend({ type: 'sync_torrent', magnetURI: stream.magnetURI, title: stream.title });
@@ -2126,6 +2239,7 @@
 
             el('sourceDrawerList').querySelectorAll('.torrent-item').forEach(function(item) {
                 item.addEventListener('click', function() {
+                    if (!canControlRoom()) return;
                     var idx = parseInt(item.dataset.drawerIdx);
                     var stream = cachedTorrentStreams[idx];
                     // Stop current torrent first
@@ -2167,7 +2281,16 @@
                 // Play in Video.js
                 var isM3u8 = data.url.toLowerCase().indexOf('.m3u8') >= 0;
                 player.src({ src: data.url, type: isM3u8 ? 'application/x-mpegURL' : 'video/mp4' });
-                player.play();
+                player.one('loadedmetadata', function() {
+                    torrentPlaybackReady = true;
+                    if (pendingTorrentCommand) {
+                        var queuedCommand = pendingTorrentCommand;
+                        pendingTorrentCommand = null;
+                        applyRemoteTorrentCommand(queuedCommand);
+                    } else if (!currentRoomCode || amIHost) {
+                        player.play();
+                    }
+                });
 
                 // Automatically fetch subtitles
                 if (currentMedia && (currentMedia.imdbId || currentMedia.id) && window.nikia.searchSubtitles) {
@@ -2241,6 +2364,7 @@
         });
 
         el('backToDetailsBtn').addEventListener('click', function() {
+            if (!canControlRoom()) return;
             el('playerView').style.display = 'none';
             el('detailsView').style.display = 'flex';
             player.pause();
@@ -2345,7 +2469,14 @@
 
         // fromSync = true means the Guest is being pulled here by a sync command
         function loadProvider(provider, fromSync) {
+            if (!fromSync && !canControlRoom()) return;
             if (!currentMedia) return;
+            var wasTorrent = currentPlayMode === 'torrent';
+            currentPlayMode = 'iframe';
+            pendingTorrentCommand = null;
+            torrentPlaybackReady = false;
+            pendingIframeStateAction = null;
+            if (wasTorrent && window.nikia && window.nikia.stopTorrent) window.nikia.stopTorrent();
             currentProvider = provider;
             var s = currentSeason;
             var e = currentEpisode;
@@ -2354,6 +2485,8 @@
             el('playerContainer').style.display = 'none';
             player.pause();
             el('embedFrame').src = url;
+            iframeBridgeReady = false;
+            desiredIframeState = null;
             document.querySelectorAll('.server-tab').forEach(function(tab) {
                 tab.classList.toggle('active', tab.dataset.provider === provider);
             });

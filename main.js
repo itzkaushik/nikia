@@ -314,18 +314,20 @@ const SYNC_BRIDGE_SCRIPT = `
     // --- VIDEO SYNC BRIDGE ---
     (function() {
       var syncedVideo = null;
-      // Commands received from the room are programmatic.  HLS players may
-      // land on a nearby keyframe, so never compare the final time to the
-      // requested time to decide whether a seek is local or remote.
-      window.isProgrammaticSeek = false;
-      window.isProgrammaticPlay = false;
-      window.isProgrammaticPause = false;
+      // Commands received from the room are programmatic.  Use counters
+      // instead of booleans so overlapping commands (e.g. rapid seeks)
+      // don't race against a fixed timeout.
+      window.isProgrammaticSeek = 0;
+      window.isProgrammaticPlay = 0;
+      window.isProgrammaticPause = 0;
 
-      function muteNext(flagName) {
-        window[flagName] = true;
-        // Some provider players do not emit the matching event.  Do not leave
-        // the bridge muted forever in that case.
-        setTimeout(function() { window[flagName] = false; }, 5000);
+      function muteNext(counterName) {
+        window[counterName]++;
+        // Safety fallback: decrement after 15s in case the provider never
+        // emits the matching event (much safer than the old 5s boolean).
+        setTimeout(function() {
+          if (window[counterName] > 0) window[counterName]--;
+        }, 15000);
       }
 
       function hookVideo(video) {
@@ -334,24 +336,24 @@ const SYNC_BRIDGE_SCRIPT = `
         console.log('Nikia Sync Bridge: Found <video>, attaching listeners');
 
         video.addEventListener('play', function() {
-          if (window.isProgrammaticPlay) {
-            window.isProgrammaticPlay = false;
+          if (window.isProgrammaticPlay > 0) {
+            window.isProgrammaticPlay--;
             return;
           }
           window.top.postMessage({ type: 'Nikia_IFRAME_EVENT', event: 'play', currentTime: video.currentTime }, '*');
         });
 
         video.addEventListener('pause', function() {
-          if (window.isProgrammaticPause) {
-            window.isProgrammaticPause = false;
+          if (window.isProgrammaticPause > 0) {
+            window.isProgrammaticPause--;
             return;
           }
           window.top.postMessage({ type: 'Nikia_IFRAME_EVENT', event: 'pause', currentTime: video.currentTime }, '*');
         });
 
         video.addEventListener('seeked', function() {
-          if (window.isProgrammaticSeek) {
-            window.isProgrammaticSeek = false;
+          if (window.isProgrammaticSeek > 0) {
+            window.isProgrammaticSeek--;
             return;
           }
           window.top.postMessage({ type: 'Nikia_IFRAME_EVENT', event: 'seek', currentTime: video.currentTime }, '*');
@@ -360,7 +362,7 @@ const SYNC_BRIDGE_SCRIPT = `
         video.addEventListener('waiting', function() {
           // A remote command often makes an HLS player briefly buffer.  That
           // is expected and must not pause the room again.
-          if (window.isProgrammaticSeek || window.isProgrammaticPlay || window.isProgrammaticPause) return;
+          if (window.isProgrammaticSeek > 0 || window.isProgrammaticPlay > 0 || window.isProgrammaticPause > 0) return;
           window.top.postMessage({ type: 'Nikia_IFRAME_EVENT', event: 'buffer_warning', currentTime: video.currentTime }, '*');
         });
 
