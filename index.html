@@ -1364,6 +1364,7 @@
         var pendingIframeStateAction = null;
         var iframeBridgeReady = false;
         var desiredIframeState = null;
+        var queuedRemoteCommand = null;
         var pendingTorrentCommand = null;
         var torrentPlaybackReady = false;
         var bufferingMembers = new Set();
@@ -1472,6 +1473,7 @@
                         currentPlayMode = 'torrent';
                         iframeBridgeReady = false;
                         desiredIframeState = null;
+                        queuedRemoteCommand = null;
                         pendingTorrentCommand = null;
                         torrentPlaybackReady = false;
                         el('detailsView').style.display = 'none';
@@ -1559,7 +1561,12 @@
 
         function postIframeCommand(action, currentTime) {
             var iframe = el('embedFrame');
-            if (!iframe || !iframe.contentWindow || !iframeBridgeReady) return false;
+            if (!iframe || !iframe.contentWindow || !iframeBridgeReady) {
+                if (!iframeBridgeReady && (action === 'play' || action === 'pause' || action === 'seek')) {
+                    queuedRemoteCommand = { type: action, action: action, currentTime: currentTime };
+                }
+                return false;
+            }
             iframe.contentWindow.postMessage({
                 type: 'Nikia_SYNC_COMMAND',
                 action: action,
@@ -1590,6 +1597,9 @@
                 applyRemoteTorrentCommand({ type: data.type, currentTime: targetTime });
             } else {
                 desiredIframeState = { action: data.type, currentTime: targetTime };
+                if (!iframeBridgeReady && (data.type === 'play' || data.type === 'pause' || data.type === 'seek')) {
+                    queuedRemoteCommand = { type: data.type, action: data.type, currentTime: targetTime };
+                }
                 postIframeCommand(data.type, targetTime);
             }
         }
@@ -1724,7 +1734,11 @@
                     // recent command only after the bridge confirms readiness.
                     if (currentPlayMode !== 'iframe') return;
                     iframeBridgeReady = true;
-                    if (pendingIframeStateAction) {
+                    if (queuedRemoteCommand) {
+                        var cmd = queuedRemoteCommand;
+                        queuedRemoteCommand = null;
+                        postIframeCommand(cmd.action || cmd.type, cmd.currentTime);
+                    } else if (pendingIframeStateAction) {
                         postIframeCommand('state_req');
                     } else if (desiredIframeState) {
                         postIframeCommand(desiredIframeState.action, desiredIframeState.currentTime);
@@ -2003,6 +2017,7 @@
             el('playerContainer').style.display = 'none';
             iframeBridgeReady = false;
             desiredIframeState = null;
+            queuedRemoteCommand = null;
             pendingTorrentCommand = null;
             torrentPlaybackReady = false;
             pendingIframeStateAction = null;
@@ -2183,6 +2198,7 @@
             el('sourceSwitcherBtn').classList.add('visible');
             iframeBridgeReady = false;
             desiredIframeState = null;
+            queuedRemoteCommand = null;
             pendingIframeStateAction = null;
 
             // Broadcast to sync room
@@ -2487,6 +2503,7 @@
             el('embedFrame').src = url;
             iframeBridgeReady = false;
             desiredIframeState = null;
+            queuedRemoteCommand = null;
             document.querySelectorAll('.server-tab').forEach(function(tab) {
                 tab.classList.toggle('active', tab.dataset.provider === provider);
             });
